@@ -15,7 +15,7 @@
       input[type=range]{width:145px}
       button{border:1px solid #d9deea;background:#f7f8fc;color:#263248;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0}
       button.primary{background:#315fce;color:white;border-color:#315fce}
-      button:disabled{opacity:.45;cursor:not-allowed}
+      button:disabled,input:disabled,textarea:disabled{opacity:.48;cursor:not-allowed}
       #state{color:#687087;font-size:12px;margin-top:8px;line-height:1.4;min-height:30px}
       .close{border:0;font-size:18px;background:transparent;padding:2px}
       label{font-size:12px}
@@ -24,13 +24,12 @@
       <header><span>AccessDraft · Google Docs</span><button class="close" id="close" title="Close">×</button></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50"></div>
-      <div class="row"><label><input id="variable" type="checkbox" checked> Variable pace</label><label><input id="pauses" type="checkbox" checked> Punctuation pauses</label></div>
+      <div class="row"><label><input id="variable" type="checkbox" checked> Timing variation</label><label><input id="pauses" type="checkbox" checked> Punctuation pauses</label></div>
       <div>
         <button class="primary" id="start">Begin insertion</button>
         <button id="pause">Pause</button>
         <button id="resume">Resume</button>
-        <button id="stop">Stop</button>
-        <button id="reset">Reset</button>
+        <button id="stop">Stop and reset</button>
       </div>
       <div id="state" role="status">Paste your text, click where you want it in the document, then begin insertion.</div>
     </section>`;
@@ -42,8 +41,9 @@
   let paused = false;
   let timer = null;
   let attached = false;
+  let activeEditor = null;
 
-  // Keep toolbar buttons from stealing focus from Google's editing surface.
+  // Prevent toolbar buttons from moving the Docs caret. Other controls remain usable while paused.
   shadow.addEventListener("mousedown", event => {
     if (event.target instanceof HTMLButtonElement) event.preventDefault();
   });
@@ -57,13 +57,31 @@
     }
   };
 
+  const focusDocumentEditor = () => {
+    if (!activeEditor?.isConnected) throw new Error("Google Docs editor is no longer available.");
+    activeEditor.focus({ preventScroll: true });
+  };
+
+  const syncControls = () => {
+    const locked = running && !paused;
+    $("text").disabled = running;
+    $("speed").disabled = locked;
+    $("variable").disabled = locked;
+    $("pauses").disabled = locked;
+    $("start").disabled = running;
+    $("pause").disabled = !running || paused;
+    $("resume").disabled = !running || !paused;
+    $("stop").disabled = !running;
+  };
+
   const paceDelay = (char, next) => {
-    let delay = 2400 / Number($("speed").value);
+    // 12,000 ms per character at 1 WPM assumes five characters per word.
+    let delay = 12000 / Number($("speed").value);
     if ($("variable").checked) delay *= 0.82 + Math.random() * 0.36;
-    if (char === " " || char === "\t") delay += 75;
+    if (char === " " || char === "\\t") delay += 75;
     if ($("pauses").checked && /[,;:]/.test(char)) delay += 180;
     if ($("pauses").checked && /[.!?]/.test(char)) delay += 350;
-    if (char === "\n" && next === "\n") delay += 650;
+    if (char === "\\n" && next === "\\n") delay += 650;
     return Math.max(8, delay);
   };
 
@@ -75,37 +93,40 @@
     });
   });
 
-  const finish = async message => {
+  const finish = async (message, resetPosition = false) => {
     running = false;
     paused = false;
     clearTimeout(timer);
     timer = null;
+    if (resetPosition) sourceIndex = 0;
     state(message);
+    syncControls();
     if (attached) {
       try { await send({ type: "ACCESSDRAFT_DETACH" }); } catch {}
       attached = false;
     }
+    activeEditor = null;
   };
 
   const step = async () => {
     if (!running || paused) return;
-    const text = $("text").value;
-    if (sourceIndex >= text.length) {
-      sourceIndex = 0;
-      await finish("Finished. Ready to insert the same text again.");
+    const source = $("text").value;
+    if (sourceIndex >= source.length) {
+      await finish("Finished. Ready to insert the same text again.", true);
       return;
     }
-    const char = text[sourceIndex];
+    const char = source[sourceIndex];
     try {
+      // Toolbar controls can take focus. Restore Google's editor before every character.
+      focusDocumentEditor();
       await send({ type: "ACCESSDRAFT_INSERT", text: char });
       sourceIndex += 1;
-      state("Inserted " + sourceIndex + " of " + text.length + " characters.");
-      if (sourceIndex >= text.length) {
-        sourceIndex = 0;
-        await finish("Finished. Ready to insert the same text again.");
+      state("Inserted " + sourceIndex + " of " + source.length + " characters.");
+      if (sourceIndex >= source.length) {
+        await finish("Finished. Ready to insert the same text again.", true);
         return;
       }
-      timer = setTimeout(step, paceDelay(char, text[sourceIndex] || ""));
+      timer = setTimeout(step, paceDelay(char, source[sourceIndex] || ""));
     } catch (error) {
       await finish("Stopped: " + error.message);
     }
@@ -113,46 +134,58 @@
 
   $("speed").addEventListener("input", () => { $("speedval").textContent = $("speed").value; });
   $("start").addEventListener("click", async () => {
-    const text = $("text").value;
-    if (!text) return state("Paste or type text before starting.");
+    const source = $("text").value;
+    if (!source) return state("Paste or type text before starting.");
     if (running) return;
-    const editor = findEditor();
-    if (!editor) return state("Google Docs editor not found. Reload the document and try again.");
-    editor.focus();
-    state("Connecting to Google Docs…");
+    activeEditor = findEditor();
+    if (!activeEditor) return state("Google Docs editor not found. Reload the document and try again.");
     try {
+      focusDocumentEditor();
+      state("Connecting to Google Docs…");
       await send({ type: "ACCESSDRAFT_ATTACH" });
       attached = true;
       running = true;
       paused = false;
-      if (sourceIndex >= text.length) sourceIndex = 0;
+      if (sourceIndex >= source.length) sourceIndex = 0;
+      syncControls();
       state("Connected. Inserting text progressively…");
-      step();
+      void step();
     } catch (error) {
       await finish("Could not connect: " + error.message);
     }
   });
+
   $("pause").addEventListener("click", () => {
-    if (!running) return;
+    if (!running || paused) return;
     paused = true;
     clearTimeout(timer);
-    state("Paused at character " + sourceIndex + " of " + $("text").value.length + ".");
+    timer = null;
+    syncControls();
+    state("Paused at character " + sourceIndex + " of " + $("text").value.length + ". You can now change the speed and pacing settings.");
   });
+
   $("resume").addEventListener("click", () => {
     if (!running || !paused) return;
-    paused = false;
-    state("Resuming…");
-    step();
+    try {
+      focusDocumentEditor();
+      paused = false;
+      syncControls();
+      state("Resuming…");
+      void step();
+    } catch (error) {
+      void finish("Could not resume: " + error.message);
+    }
   });
-  $("stop").addEventListener("click", () => { void finish("Stopped at character " + sourceIndex + ". Press Begin to start again."); });
-  $("reset").addEventListener("click", () => {
-    sourceIndex = 0;
-    void finish("Progress reset. Ready to start from the beginning.");
+
+  $("stop").addEventListener("click", () => {
+    void finish("Stopped and reset. The next start begins from the beginning.", true);
   });
+
   $("close").addEventListener("click", () => {
     void finish("Connector closed.");
     host.remove();
   });
 
+  syncControls();
   document.documentElement.appendChild(host);
 })();
