@@ -60,5 +60,5 @@ The Vite PWA plugin generates the web manifest and service worker during product
 - The standard bookmarklet reports characters sent and dispatches input events. A webpage may still reject or transform them.
 - The Google Docs extension uses Chrome's debugger permission and sends text through the DevTools Protocol. It requires Chrome, the extension to be enabled, and the document tab to remain open and focused.
 - The extension's Google Docs focus and pacing fixes need live testing after reload.
-- Pauses are fixed and set by you, not random. In the Google Docs toolbar you can pause for an exact number of seconds after every N words and after each sentence. Setting a value to 0 turns that pause off. There is no paragraph pause.
+- Pauses are fixed and set by you, not random. In the Google Docs toolbar you can pause for an exact number of seconds (digits and one decimal point, up to two decimal places, for example 1.05) after every N words and after each sentence. Setting a value to 0 turns that pause off. There is no paragraph pause.
 - Test the connector on each target website before relying on it for important work.
