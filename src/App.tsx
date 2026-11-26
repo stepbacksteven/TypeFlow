@@ -45,7 +45,7 @@ export default function App() {
     const nextIndex = indexRef.current + 1;
     indexRef.current = nextIndex;
     setIndex(nextIndex);
-    if (nextIndex >= text.length) { setRun("done"); return; }
+    if (nextIndex >= text.length) { indexRef.current = 0; setIndex(0); setRun("done"); return; }
     timer.current = window.setTimeout(tick, paceDelay(text[nextIndex - 1], text[nextIndex]));
   };
   const begin = () => {
