@@ -14,19 +14,29 @@ Open the local Vite URL in Chrome. Build with `npm run build`.
 ## Main workflow
 
 1. Enter or paste text in Assisted Input.
-2. Use Copy for connector.
-3. Open the destination webpage.
-4. Launch the AccessDraft bookmarklet from the Chrome bookmarks bar.
-5. Paste the text into the floating toolbar.
-6. Select a supported writing field, set a pace, and begin insertion.
+2. For standard websites, use the AccessDraft bookmarklet.
+3. For Google Docs, install the Chrome extension in the `extension` folder. Do not use the bookmarklet on Google Docs.
+4. Paste or type the text into the connector toolbar, click the intended position in the document, and begin insertion.
+5. Set your pace and use pause, resume, stop, or reset as needed.
 
-The standalone app cannot directly control another browser tab. The bookmarklet runs on the destination page and provides the actual insertion controls.
+## Google Docs extension installation
 
-## Supported destinations
+1. In the Codespaces terminal, run `git pull` to get the latest changes.
+2. Run `npm install` and `npm run dev -- --host 0.0.0.0` to start the AccessDraft web app.
+3. In the Codespaces file explorer, open the `extension` folder and confirm it contains `manifest.json`, `background.js`, and `content.js`.
+4. In Chrome, open `chrome://extensions`.
+5. Turn on Developer mode.
+6. Click Load unpacked and select the repository's `extension` folder.
+7. Open or reload a Google Docs document. The AccessDraft Google Docs toolbar should appear at the bottom-right.
+8. Paste or type your text into that toolbar. Click the desired insertion point in the document, then use Begin insertion.
 
-The bookmarklet supports standard text inputs, textareas, and many contenteditable fields. Compatibility varies by site and editor. Iframes may be inaccessible because of browser same-origin restrictions. Some editors require their own editing APIs and may reject synthetic input events.
+Chrome will show a debugging notification while AccessDraft controls text insertion. The extension requests the debugger permission because it uses Chrome's DevTools Protocol to send actual text input to the focused document. Do not use Chrome DevTools debugging on the same tab at the same time.
 
-Google Docs uses a specialized editor. Direct bookmarklet insertion is not claimed as supported. Use the copy and paste fallback.
+To update the extension after pulling new code, return to `chrome://extensions` and click the extension's Reload button. Reload the Google Docs tab too.
+
+## Standard website connector
+
+The bookmarklet supports standard text inputs, textareas, and many contenteditable fields. Compatibility varies by site and editor. Some editors require their own integration and may reject synthetic input events.
 
 ## Privacy
 
@@ -39,5 +49,6 @@ The Vite PWA plugin generates the web manifest and service worker during product
 ## Current implementation limits
 
 - The progress preview in the main app is a pacing preview. It does not represent text accepted by an external page.
-- The floating bookmarklet reports characters sent and dispatches input events. A webpage may still reject or transform them, so the connector cannot guarantee that every destination accepted the text.
+- The standard bookmarklet reports characters sent and dispatches input events. A webpage may still reject or transform them.
+- The Google Docs extension uses Chrome's debugger permission and sends text through the DevTools Protocol. It requires Chrome, the extension to be enabled, and the document tab to remain open and focused.
 - Test the connector on each target website before relying on it for important work.
