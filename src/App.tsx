@@ -1,101 +1,158 @@
-import { useEffect, useMemo, useState } from "react";
-import { deleteDraft, getDrafts, saveDraft, type Draft } from "./db";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { loadSettings, saveSettings, type Preferences } from "./db";
+import { bookmarklet } from "./bookmarklet";
 
-type Page = "home" | "write" | "documents";
-const newDraft = (): Draft => ({ id: crypto.randomUUID(), title: "Untitled document", content: "", updatedAt: Date.now() });
-const dateLabel = (value: number) => new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(value);
+type RunState = "idle" | "running" | "paused" | "stopped" | "done";
+const defaults: Preferences = { wpm: 50, mode: "character", variable: true, punctuation: true, wordPause: 90, sentencePause: 380, paragraphPause: 850, dark: false, fontSize: 17, dyslexia: false, highContrast: false, largeButtons: false, clutterFree: false, speechRate: 1 };
+const countWords = (s: string) => s.trim() ? s.trim().split(/\s+/u).length : 0;
 
 export default function App() {
-  const [page, setPage] = useState<Page>("home");
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [active, setActive] = useState<Draft | null>(null);
+  const [text, setText] = useState("");
+  const [prefs, setPrefs] = useState<Preferences>(defaults);
+  const [loaded, setLoaded] = useState(false);
+  const [status, setStatus] = useState<RunState>("idle");
+  const [index, setIndex] = useState(0);
+  const [message, setMessage] = useState("No destination selected. Install and launch the browser connector on the page you want to write in.");
+  const [tab, setTab] = useState<"input" | "settings" | "connect">("input");
+  const [voice, setVoice] = useState("");
+  const [listening, setListening] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [installing, setInstalling] = useState(false);
-  const [query, setQuery] = useState("");
-  const [saved, setSaved] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const timer = useRef<number | null>(null);
+  const indexRef = useRef(0);
+  const stateRef = useRef<RunState>("idle");
+  const recognition = useRef<any>(null);
+  const speechVoices = useMemo(() => typeof speechSynthesis !== "undefined" ? speechSynthesis.getVoices() : [], []);
 
-  async function refresh() { setDrafts(await getDrafts()); }
-  useEffect(() => { void refresh(); }, []);
-  useEffect(() => {
-    const handler = (event: Event) => { event.preventDefault(); setInstallPrompt(event); };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
+  useEffect(() => { loadSettings().then(s => { if (s) setPrefs({ ...defaults, ...s }); setLoaded(true); }); }, []);
+  useEffect(() => { if (loaded) void saveSettings(prefs); }, [prefs, loaded]);
+  useEffect(() => { const h = (e: Event) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener("beforeinstallprompt", h); return () => window.removeEventListener("beforeinstallprompt", h); }, []);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); recognition.current?.stop?.(); }, []);
 
-  useEffect(() => {
-    if (!active) return;
-    setSaved(false);
-    const timer = window.setTimeout(async () => {
-      const updated = { ...active, updatedAt: Date.now() };
-      await saveDraft(updated);
-      setDrafts(await getDrafts());
-      setSaved(true);
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [active]);
+  const update = (patch: Partial<Preferences>) => setPrefs(p => ({ ...p, ...patch }));
+  const setRun = (s: RunState) => { stateRef.current = s; setStatus(s); };
+  const progress = text.length ? Math.min(100, Math.round(index / text.length * 100)) : 0;
+  const paceDelay = (char: string, next: string) => {
+    let ms = 12000 / prefs.wpm;
+    if (prefs.variable) ms *= 0.82 + Math.random() * 0.36;
+    if (char === " " || char === "\t") ms += prefs.wordPause;
+    if (prefs.punctuation && /[,;:]/.test(char)) ms += 220;
+    if (prefs.punctuation && /[.!?]/.test(char)) ms += prefs.sentencePause;
+    if (char === "\n" && next === "\n") ms += prefs.paragraphPause;
+    return Math.max(8, ms);
+  };
+  const tick = () => {
+    if (stateRef.current !== "running") return;
+    const nextIndex = indexRef.current + 1;
+    indexRef.current = nextIndex;
+    setIndex(nextIndex);
+    if (nextIndex >= text.length) { setRun("done"); return; }
+    timer.current = window.setTimeout(tick, paceDelay(text[nextIndex - 1], text[nextIndex]));
+  };
+  const begin = () => {
+    if (!text) { setMessage("Add text to Assisted Input before starting."); return; }
+    if (indexRef.current >= text.length) { indexRef.current = 0; setIndex(0); }
+    setRun("running");
+    timer.current = window.setTimeout(tick, 0);
+    setMessage("Insertion preview is running here. Use the browser connector on the destination page to insert into its field.");
+  };
+  const pause = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; if (stateRef.current === "running") setRun("paused"); };
+  const stop = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; setRun("stopped"); };
+  const reset = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; indexRef.current = 0; setIndex(0); setRun("idle"); };
+  const paste = async () => { try { const value = await navigator.clipboard.readText(); setText(value); setMessage("Text pasted. Review it before insertion."); } catch { setMessage("Clipboard access was blocked. Use Ctrl + V inside the Assisted Input box."); } };
+  const copyBookmarklet = async () => { try { await navigator.clipboard.writeText(bookmarklet); setMessage("Bookmarklet copied. Create a bookmark and paste it into the bookmark URL field."); } catch { setMessage("Clipboard permission was blocked. Select and copy the bookmarklet text below."); } };
+  const readAloud = (selectionOnly = false) => {
+    if (!("speechSynthesis" in window)) { setMessage("Text-to-speech is not supported in this browser."); return; }
+    speechSynthesis.cancel();
+    const selected = window.getSelection()?.toString();
+    const utterance = new SpeechSynthesisUtterance(selectionOnly && selected ? selected : text);
+    utterance.rate = prefs.speechRate;
+    if (voice) utterance.voice = speechVoices.find(v => v.name === voice) || null as any;
+    speechSynthesis.speak(utterance);
+  };
+  const startDictation = () => {
+    const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Ctor) { setMessage("Speech recognition is unavailable in this browser. Try a supported version of Chrome."); return; }
+    const rec = new Ctor(); recognition.current = rec; rec.continuous = true; rec.interimResults = true; rec.lang = navigator.language || "en-US";
+    let finalText = "";
+    rec.onresult = (event: any) => { let interim = ""; for (let i = event.resultIndex; i < event.results.length; i++) { const part = event.results[i][0].transcript; if (event.results[i].isFinal) finalText += part + " "; else interim += part; } setText(v => v + (finalText ? finalText : "") + (interim ? "" : "")); finalText = ""; };
+    rec.onerror = () => { setListening(false); setMessage("Speech recognition stopped. Review the text before insertion."); };
+    rec.onend = () => setListening(false);
+    rec.start(); setListening(true); setMessage("Listening. Speech recognition may process audio through your browser provider.");
+  };
+  const install = async () => { if (!installPrompt) return; await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); };
 
-  const filtered = useMemo(() => drafts.filter(d => d.title.toLowerCase().includes(query.toLowerCase()) || d.content.toLowerCase().includes(query.toLowerCase())), [drafts, query]);
-  function openDraft(draft: Draft) { setActive(draft); setPage("write"); setMenuOpen(false); }
-  function createDraft() { const draft = newDraft(); setActive(draft); setPage("write"); setMenuOpen(false); }
-  async function removeDraft(id: string) {
-    await deleteDraft(id);
-    if (active?.id === id) setActive(null);
-    await refresh();
-  }
-  async function install() {
-    if (!installPrompt) return;
-    setInstalling(true);
-    await installPrompt.prompt();
-    await installPrompt.userChoice;
-    setInstallPrompt(null);
-    setInstalling(false);
-  }
-
-  return <div className="app-shell">
-    <aside className={"sidebar " + (menuOpen ? "sidebar-open" : "")}>
-      <button className="brand" onClick={() => { setPage("home"); setActive(null); }} aria-label="AccessDraft home"><span className="brand-mark">A</span><span>access<span className="brand-light">draft</span></span></button>
-      <div className="side-label">WORKSPACE</div>
-      <nav aria-label="Main navigation">
-        <button className={"nav-item " + (page === "home" ? "selected" : "")} onClick={() => { setPage("home"); setActive(null); setMenuOpen(false); }}><span className="nav-icon">⌂</span>Dashboard</button>
-        <button className={"nav-item " + (page === "write" ? "selected" : "")} onClick={() => { if (!active) createDraft(); else setPage("write"); setMenuOpen(false); }}><span className="nav-icon">＋</span>Writing space</button>
-        <button className={"nav-item " + (page === "documents" ? "selected" : "")} onClick={() => { setPage("documents"); setActive(null); setMenuOpen(false); }}><span className="nav-icon">▤</span>My documents <span className="nav-count">{drafts.length}</span></button>
-      </nav>
-      <div className="sidebar-bottom">
-        <div className="local-card"><span className="local-dot" /><div><strong>Saved on this device</strong><small>Your drafts stay private</small></div></div>
-        <div className="profile"><div className="avatar">AD</div><div><strong>My workspace</strong><small>Personal account</small></div><span className="more">···</span></div>
-      </div>
+  return <div className={`app-shell ${prefs.dark ? "dark" : ""} ${prefs.highContrast ? "contrast" : ""} ${prefs.largeButtons ? "large-controls" : ""} ${prefs.clutterFree ? "clutter-free" : ""} ${prefs.dyslexia ? "dyslexia" : ""}`} style={{ "--input-size": prefs.fontSize + "px" } as React.CSSProperties}>
+    <aside className="sidebar">
+      <div className="brand"><span className="brand-mark">A</span><span>AccessDraft</span></div>
+      <p className="side-label">ACCESSIBILITY TOOL</p>
+      <button className={tab === "input" ? "nav-item selected" : "nav-item"} onClick={() => setTab("input")}> <span>▤</span> Assisted Input</button>
+      <button className={tab === "connect" ? "nav-item selected" : "nav-item"} onClick={() => setTab("connect")}><span>⌁</span> Browser connection</button>
+      <button className={tab === "settings" ? "nav-item selected" : "nav-item"} onClick={() => setTab("settings")}><span>⚙</span> Settings</button>
+      <div className="sidebar-bottom"><span className="status-dot" /> Settings saved on this device <small>No account required</small></div>
     </aside>
-
     <main className="main-area">
-      <header className="topbar">
-        <button className="mobile-menu" onClick={() => setMenuOpen(v => !v)} aria-label="Toggle navigation">☰</button>
-        <div className="breadcrumbs"><span>Workspace</span><span className="crumb-sep">/</span><strong>{page === "home" ? "Dashboard" : page === "write" ? "Writing space" : "My documents"}</strong></div>
-        <div className="top-actions"><span className="connection"><i />All changes saved locally</span>{installPrompt && <button className="install-button" onClick={install} disabled={installing}>{installing ? "Opening…" : "Install app"}</button>}</div>
-      </header>
-
-      {page === "home" && <section className="page-content">
-        <div className="welcome-row"><div><p className="eyebrow">YOUR WRITING WORKSPACE</p><h1>Good to see you.</h1><p className="subheading">A clear space to think, write, and make progress.</p></div><button className="primary-button" onClick={createDraft}><span>＋</span> New document</button></div>
-        <div className="hero-card"><div className="hero-copy"><span className="hero-tag">A SPACE THAT WORKS FOR YOU</span><h2>Your ideas deserve<br/>room to grow.</h2><p>Start with a blank page. Your work saves automatically on this device, so you can pick up where you left off.</p><button className="hero-button" onClick={createDraft}>Start writing <span>→</span></button></div><div className="hero-art" aria-hidden="true"><div className="art-sheet sheet-back" /><div className="art-sheet sheet-front"><div className="sheet-line long" /><div className="sheet-line medium" /><div className="sheet-highlight" /><div className="sheet-line long" /><div className="sheet-line short" /><div className="sheet-line medium" /></div><div className="art-spark">✳</div></div></div>
-        <div className="section-heading"><div><h2>Recent documents</h2><p>Continue where you left off.</p></div><button className="text-button" onClick={() => setPage("documents")}>View all <span>→</span></button></div>
-        {drafts.length === 0 ? <div className="empty-state"><div className="empty-icon">▤</div><h3>Your documents will show up here</h3><p>Create your first document to get started.</p><button className="secondary-button" onClick={createDraft}>Create a document</button></div> :
-          <div className="recent-grid">{drafts.slice(0,3).map(d => <button className="document-card" key={d.id} onClick={() => openDraft(d)}><div className="doc-preview"><span className="doc-preview-title">{d.title || "Untitled document"}</span><span className="preview-line" /><span className="preview-line short" /><span className="preview-line" /></div><div className="doc-meta"><strong>{d.title || "Untitled document"}</strong><small>Edited {dateLabel(d.updatedAt)}</small></div></button>)}</div>}
-        <div className="privacy-strip"><span className="privacy-icon">⌑</span><div><strong>Your work stays yours.</strong><span>Documents are stored locally in this browser. No account or cloud upload is required.</span></div></div>
-      </section>}
-
-      {page === "write" && <section className="editor-page">
-        <div className="editor-toolbar"><button className="back-button" onClick={() => { setPage("home"); setActive(null); }}>← <span>Dashboard</span></button><div className="save-status"><span className={saved ? "save-check" : "save-pending"}>{saved ? "✓" : "·"}</span>{saved ? "Saved on this device" : "Saving…"}</div></div>
-        <div className="editor-wrap">
-          <input className="title-input" aria-label="Document title" value={active?.title ?? ""} onChange={e => setActive(a => a ? { ...a, title: e.target.value } : a)} placeholder="Untitled document" />
-          <div className="editor-hint">YOUR DOCUMENT <span>·</span> Changes save automatically</div>
-          <textarea className="writing-area" aria-label="Document content" value={active?.content ?? ""} onChange={e => setActive(a => a ? { ...a, content: e.target.value } : a)} placeholder={"Start writing here…\n\nTake your time. Your ideas are safe here."} />
-          <div className="editor-footer"><span>{(active?.content ?? "").trim() ? (active?.content ?? "").trim().split(/\s+/).length : 0} words</span><button className="delete-button" onClick={() => active && removeDraft(active.id)}>Delete document</button></div>
+      <header className="topbar"><div><span className="crumb-muted">AccessDraft</span><span className="crumb-sep"> / </span><strong>{tab === "input" ? "Assisted Input" : tab === "connect" ? "Connect your browser" : "Settings"}</strong></div><div className="top-actions">{installPrompt && <button className="outline-button" onClick={install}>Install app</button>}<span className="local-label"><i /> Local settings</span></div></header>
+      {tab === "input" && <section className="content">
+        <div className="page-heading"><div><p className="eyebrow">PROGRESSIVE TEXT INSERTION</p><h1>Assisted Input</h1><p className="subtitle">Prepare your text here, then send it into a writing field on another webpage.</p></div><span className="privacy-pill">Private by default</span></div>
+        <div className="workspace-grid">
+          <section className="panel input-panel">
+            <div className="panel-heading"><div><h2>Your text</h2><p>Text stays in this box until you choose to clear it.</p></div><span className="counter">{countWords(text)} words · {text.length.toLocaleString()} characters</span></div>
+            <textarea className="assisted-text" value={text} onChange={e => { setText(e.target.value); if (status !== "running") reset(); }} placeholder="Type or paste your text here. Your wording and paragraph breaks will be preserved." spellCheck aria-label="Assisted Input text" />
+            <div className="input-actions"><div><button className="outline-button" onClick={paste}>Paste text</button><button className="text-button" onClick={() => { setText(""); reset(); }}>Clear text</button></div><button className="text-button" onClick={() => { const el = document.querySelector<HTMLTextAreaElement>(".assisted-text"); el?.select(); }}>Select all</button></div>
+            <div className="dictation-row"><div><strong>Speech-to-text</strong><small>Optional. Review recognized words before using them.</small></div>{!listening ? <button className="outline-button" onClick={startDictation}>Start microphone</button> : <button className="danger-button" onClick={() => { recognition.current?.stop?.(); setListening(false); }}>Stop listening</button>}</div>
+            <div className="tts-row"><div><strong>Read aloud</strong><small>Secondary listening support</small></div><div className="tts-controls"><button className="outline-button" onClick={() => readAloud()}>Play</button><button className="text-button" onClick={() => speechSynthesis.pause()}>Pause</button><button className="text-button" onClick={() => speechSynthesis.resume()}>Resume</button><button className="text-button" onClick={() => speechSynthesis.cancel()}>Stop</button></div></div>
+          </section>
+          <section className="panel control-panel">
+            <div className="panel-heading"><div><h2>Insertion settings</h2><p>Choose a comfortable pace.</p></div><button className="link-button" onClick={() => setTab("settings")}>More settings</button></div>
+            <div className="speed-display"><div><span>WORDS PER MINUTE</span><strong>{prefs.wpm} <small>WPM</small></strong></div><span className="speed-tag">{prefs.wpm <= 30 ? "Very slow" : prefs.wpm <= 40 ? "Slow" : prefs.wpm <= 60 ? "Moderate" : prefs.wpm <= 80 ? "Fast" : "Very fast"}</span></div>
+            <input aria-label="Words per minute" className="range" type="range" min="5" max="120" value={prefs.wpm} onChange={e => update({ wpm: Number(e.target.value) })} />
+            <div className="preset-row">{[25,35,50,75,90].map(n => <button key={n} className={prefs.wpm === n ? "preset active" : "preset"} onClick={() => update({wpm:n})}>{n}</button>)}</div>
+            <div className="setting-line"><label htmlFor="insert-mode">Insertion style</label><select id="insert-mode" value={prefs.mode} onChange={e => update({mode:e.target.value as Preferences["mode"]})}><option value="character">Character by character</option><option value="word">Progressive word insertion</option></select></div>
+            <label className="toggle-line"><span><strong>Variable pacing</strong><small>Small timing changes around your target speed</small></span><input type="checkbox" checked={prefs.variable} onChange={e => update({variable:e.target.checked})}/></label>
+            <label className="toggle-line"><span><strong>Punctuation pauses</strong><small>Pause slightly longer after punctuation</small></span><input type="checkbox" checked={prefs.punctuation} onChange={e => update({punctuation:e.target.checked})}/></label>
+            <div className="progress-block"><div className="progress-top"><strong>Insertion progress</strong><span>{progress}%</span></div><div className="progress-track"><div style={{width: progress + "%"}} /></div><div className="progress-stats"><span>{index.toLocaleString()} / {text.length.toLocaleString()} characters</span><span>{Math.max(0,text.length-index).toLocaleString()} remaining</span></div></div>
+            <div className="run-controls">
+              <button className="primary-button" disabled={!text || status === "running"} onClick={begin}>▶ {status === "paused" ? "Resume insertion" : "Begin insertion"}</button>
+              <button className="outline-button" disabled={status !== "running"} onClick={pause}>Pause</button>
+              <button className="danger-button" disabled={status !== "running" && status !== "paused"} onClick={stop}>Stop</button>
+              <button className="text-button" onClick={reset}>Reset</button>
+            </div>
+            <div className="status-message" role="status">{status === "running" ? "Insertion preview running" : status === "paused" ? "Paused at current position" : status === "done" ? "Preview completed" : status === "stopped" ? "Stopped" : "Ready"} · {message}</div>
+          </section>
         </div>
+        <div className="destination-note"><span className="destination-icon">⌁</span><div><strong>Writing in another app?</strong><span>Install the bookmarklet connector to insert text progressively into supported fields on the page you are using.</span></div><button className="link-button" onClick={() => setTab("connect")}>Set up connector →</button></div>
       </section>}
-
-      {page === "documents" && <section className="page-content documents-page"><div className="welcome-row"><div><p className="eyebrow">YOUR WORK</p><h1>My documents</h1><p className="subheading">All your writing, saved on this device.</p></div><button className="primary-button" onClick={createDraft}>＋ New document</button></div><div className="search-wrap"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search your documents" aria-label="Search documents" /></div>{filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">⌕</div><h3>{query ? "No matching documents" : "No documents yet"}</h3><p>{query ? "Try another search." : "Create a document and it will appear here."}</p></div> : <div className="document-list">{filtered.map(d => <div className="document-row" key={d.id}><button className="document-open" onClick={() => openDraft(d)}><span className="file-icon">▤</span><span><strong>{d.title || "Untitled document"}</strong><small>{d.content.slice(0,100) || "No content yet"}</small></span></button><span className="document-date">{dateLabel(d.updatedAt)}</span><button className="icon-button" aria-label={"Delete " + d.title} onClick={() => removeDraft(d.id)}>×</button></div>)}</div>}</section>}
-
-      <footer className="app-footer"><span>AccessDraft</span><span>Designed for focus and accessibility</span></footer>
+      {tab === "connect" && <section className="content narrow-content">
+        <div className="page-heading"><div><p className="eyebrow">BROWSER CONNECTOR</p><h1>Connect AccessDraft to your browser</h1><p className="subtitle">Add a bookmarklet to Chrome. Launch it on the webpage where you want to type.</p></div></div>
+        <section className="panel connect-panel">
+          <div className="step-number">01</div><h2>Copy your connector bookmarklet</h2><p>Copy the code, create a new Chrome bookmark, name it “AccessDraft”, then paste the code into the bookmark URL field.</p><button className="primary-button" onClick={copyBookmarklet}>Copy bookmarklet</button>
+          <label className="field-label" htmlFor="bookmarklet-code">Bookmarklet code</label><textarea id="bookmarklet-code" className="code-area" readOnly value={bookmarklet} onFocus={e => e.currentTarget.select()} />
+          <div className="step-divider" /><div className="step-number">02</div><h2>Open the page you want to write in</h2><p>Open Google Docs, D2L, Gmail, Word Online, or another website. Click the AccessDraft bookmark in your bookmarks bar.</p>
+          <div className="step-divider" /><div className="step-number">03</div><h2>Select a supported writing field</h2><p>Click inside a normal text box, textarea, or contenteditable editor. The connector remembers that field while you use its floating toolbar.</p>
+          <div className="compatibility"><strong>Compatibility details</strong><p>Standard HTML inputs, textareas, and many contenteditable fields are supported. Google Docs uses a specialized canvas-based editor and is not confirmed compatible with direct insertion. Use the connector’s clipboard fallback there. Cross-origin and sandboxed frames may block access.</p></div>
+        </section>
+      </section>}
+      {tab === "settings" && <section className="content narrow-content">
+        <div className="page-heading"><div><p className="eyebrow">PERSONAL PREFERENCES</p><h1>Settings</h1><p className="subtitle">Preferences are stored locally in this browser.</p></div></div>
+        <section className="panel settings-panel"><h2>Insertion and pacing</h2>
+          <div className="setting-line"><label>Words per minute <strong>{prefs.wpm}</strong></label><input className="range" type="range" min="5" max="120" value={prefs.wpm} onChange={e=>update({wpm:+e.target.value})}/></div>
+          <div className="setting-line"><label>Pause between words (ms)</label><input type="number" min="0" max="3000" value={prefs.wordPause} onChange={e=>update({wordPause:+e.target.value})}/></div>
+          <div className="setting-line"><label>Pause after sentence (ms)</label><input type="number" min="0" max="5000" value={prefs.sentencePause} onChange={e=>update({sentencePause:+e.target.value})}/></div>
+          <div className="setting-line"><label>Pause between paragraphs (ms)</label><input type="number" min="0" max="10000" value={prefs.paragraphPause} onChange={e=>update({paragraphPause:+e.target.value})}/></div>
+          <label className="toggle-line"><span><strong>Variable pacing</strong><small>Vary timing slightly while keeping average pace near the target</small></span><input type="checkbox" checked={prefs.variable} onChange={e=>update({variable:e.target.checked})}/></label>
+          <label className="toggle-line"><span><strong>Punctuation pauses</strong><small>Use sentence and punctuation pauses</small></span><input type="checkbox" checked={prefs.punctuation} onChange={e=>update({punctuation:e.target.checked})}/></label>
+          <div className="step-divider"/><h2>Interface</h2>
+          <label className="toggle-line"><span><strong>Dark mode</strong></span><input type="checkbox" checked={prefs.dark} onChange={e=>update({dark:e.target.checked})}/></label>
+          <label className="toggle-line"><span><strong>High contrast</strong></span><input type="checkbox" checked={prefs.highContrast} onChange={e=>update({highContrast:e.target.checked})}/></label>
+          <label className="toggle-line"><span><strong>Larger controls</strong></span><input type="checkbox" checked={prefs.largeButtons} onChange={e=>update({largeButtons:e.target.checked})}/></label>
+          <label className="toggle-line"><span><strong>Dyslexia-friendly font</strong></span><input type="checkbox" checked={prefs.dyslexia} onChange={e=>update({dyslexia:e.target.checked})}/></label>
+          <label className="toggle-line"><span><strong>Reduced visual clutter</strong></span><input type="checkbox" checked={prefs.clutterFree} onChange={e=>update({clutterFree:e.target.checked})}/></label>
+          <div className="setting-line"><label>Text size <strong>{prefs.fontSize}px</strong></label><input className="range" type="range" min="14" max="26" value={prefs.fontSize} onChange={e=>update({fontSize:+e.target.value})}/></div>
+          <div className="step-divider"/><h2>Audio</h2><div className="setting-line"><label>Speech rate</label><input type="range" min="0.6" max="1.6" step="0.1" value={prefs.speechRate} onChange={e=>update({speechRate:+e.target.value})}/></div><div className="setting-line"><label htmlFor="voice">Voice</label><select id="voice" value={voice} onChange={e=>setVoice(e.target.value)}><option value="">System default</option>{speechVoices.map(v=><option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</select></div>
+          <button className="danger-button" onClick={async()=>{await saveSettings(defaults);setPrefs(defaults);setMessage("Local preferences reset.");}}>Reset local settings</button>
+        </section>
+      </section>}
+      <footer className="app-footer"><span>AccessDraft</span><span>Progressive text insertion · Local-first</span></footer>
     </main>
   </div>;
 }
