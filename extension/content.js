@@ -42,6 +42,7 @@
   let timer = null;
   let attached = false;
   let activeEditor = null;
+  let sending = false;
 
   // Prevent toolbar buttons from moving the Docs caret. Other controls remain usable while paused.
   shadow.addEventListener("mousedown", event => {
@@ -78,10 +79,10 @@
     // 12,000 ms per character at 1 WPM assumes five characters per word.
     let delay = 12000 / Number($("speed").value);
     if ($("variable").checked) delay *= 0.82 + Math.random() * 0.36;
-    if (char === " " || char === "\\t") delay += 75;
+    if (char === " " || char === "\t") delay += 75;
     if ($("pauses").checked && /[,;:]/.test(char)) delay += 180;
     if ($("pauses").checked && /[.!?]/.test(char)) delay += 350;
-    if (char === "\\n" && next === "\\n") delay += 650;
+    if (char === "\n" && next === "\n") delay += 650;
     return Math.max(8, delay);
   };
 
@@ -109,7 +110,7 @@
   };
 
   const step = async () => {
-    if (!running || paused) return;
+    if (!running || paused || sending) return;
     const source = $("text").value;
     if (sourceIndex >= source.length) {
       await finish("Finished. Ready to insert the same text again.", true);
@@ -118,8 +119,11 @@
     const char = source[sourceIndex];
     try {
       // Toolbar controls can take focus. Restore Google's editor before every character.
+      sending = true;
       focusDocumentEditor();
       await send({ type: "ACCESSDRAFT_INSERT", text: char });
+      sending = false;
+      if (!running || paused) return;
       sourceIndex += 1;
       state("Inserted " + sourceIndex + " of " + source.length + " characters.");
       if (sourceIndex >= source.length) {
@@ -128,6 +132,7 @@
       }
       timer = setTimeout(step, paceDelay(char, source[sourceIndex] || ""));
     } catch (error) {
+      sending = false;
       await finish("Stopped: " + error.message);
     }
   };
