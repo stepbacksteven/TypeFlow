@@ -17,7 +17,7 @@ Open the local Vite URL in Chrome. Build with `npm run build`.
 2. For standard websites, use the AccessDraft bookmarklet.
 3. For Google Docs, install the Chrome extension in the `extension` folder. Do not use the bookmarklet on Google Docs.
 4. Paste or type the text into the connector toolbar, click the intended position in the document, and begin insertion.
-5. Set your pace and use pause, resume, stop, or reset as needed.
+5. Set your pace and use pause, resume, or stop as needed.
 
 ## Google Docs extension installation
 
@@ -33,6 +33,14 @@ Open the local Vite URL in Chrome. Build with `npm run build`.
 Chrome will show a debugging notification while AccessDraft controls text insertion. The extension requests the debugger permission because it uses Chrome's DevTools Protocol to send actual text input to the focused document. Do not use Chrome DevTools debugging on the same tab at the same time.
 
 To update the extension after pulling new code, return to `chrome://extensions` and click the extension's Reload button. Reload the Google Docs tab too.
+
+## Pacing and controls
+
+- WPM controls are locked while insertion runs. Pause before changing speed or pacing options.
+- Pause preserves the current position so you can resume.
+- Stop and reset ends the run and returns the source position to the beginning.
+- Completing an insertion resets the source position automatically.
+- Variable pacing adjusts the interval around the selected speed. Punctuation and paragraph breaks add extra pauses. These are pacing controls, not simulated typing errors.
 
 ## Standard website connector
 
@@ -51,4 +59,6 @@ The Vite PWA plugin generates the web manifest and service worker during product
 - The progress preview in the main app is a pacing preview. It does not represent text accepted by an external page.
 - The standard bookmarklet reports characters sent and dispatches input events. A webpage may still reject or transform them.
 - The Google Docs extension uses Chrome's debugger permission and sends text through the DevTools Protocol. It requires Chrome, the extension to be enabled, and the document tab to remain open and focused.
+- The extension's Google Docs focus and pacing fixes need live testing after reload.
+- Randomized pauses intended to imitate human typing are not included. Use the explicit punctuation and paragraph pauses for predictable pacing.
 - Test the connector on each target website before relying on it for important work.
