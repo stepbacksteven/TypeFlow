@@ -9,31 +9,32 @@
     <style>
       *{box-sizing:border-box;font:14px Arial,sans-serif}
       section{width:350px;background:#fff;color:#20283a;border:1px solid #dfe3ef;border-radius:14px;box-shadow:0 12px 40px #17213a33;padding:14px}
-      header,.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+      header,.row,.line{display:flex;justify-content:space-between;align-items:center;gap:8px}
       header{font-weight:700;margin-bottom:10px}
       textarea{display:block;width:100%;height:125px;resize:vertical;border:1px solid #dfe3ef;border-radius:8px;padding:9px;line-height:1.5;color:#20283a;background:#fff}
       input[type=range]{width:145px}
       button{border:1px solid #d9deea;background:#f7f8fc;color:#263248;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0}
       button.primary{background:#315fce;color:white;border-color:#315fce}
       button:disabled,input:disabled,textarea:disabled{opacity:.48;cursor:not-allowed}
-      .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:8px}
-      #state{flex:1;color:#687087;font-size:10.5px;line-height:1.35;min-height:28px}
-      .close{border:0;font-size:18px;background:transparent;padding:2px}
       label{font-size:12px}
-      .opt{margin-top:6px}
-      .opt span,.opt input{font-size:12px}
-      input[type=number]{width:54px;border:1px solid #dfe3ef;border-radius:6px;padding:4px 6px;color:#20283a;background:#fff}
-      .hint{font-size:10.5px;color:#8a92a6;margin-top:4px}
-      .version{flex:none;white-space:nowrap;text-align:right;font-size:10px;color:#8a92a6}
+      .opts{display:grid;gap:6px;margin:8px 0 6px;padding:8px 10px;background:#f7f8fc;border:1px solid #e8ebf4;border-radius:8px}
+      .unit{display:flex;align-items:center;gap:6px;font-size:12px;color:#687087}
+      .num{width:58px;text-align:right;border:1px solid #dfe3ef;border-radius:6px;padding:4px 6px;font-size:12px;color:#20283a;background:#fff}
+      .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:6px}
+      #state{flex:1;color:#8a92a6;font-size:9.5px;line-height:1.3;min-height:12px}
+      .version{flex:none;white-space:nowrap;text-align:right;font-size:9.5px;color:#8a92a6}
+      .close{border:0;font-size:18px;background:transparent;padding:2px}
     </style>
     <section>
       <header><span>AccessDraft · Google Docs</span><button class="close" id="close" title="Close">×</button></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50"></div>
       <div class="row"><label><input id="variable" type="checkbox" checked> Timing variation</label><label><input id="pauses" type="checkbox" checked> Punctuation pauses</label></div>
-      <div class="row opt"><label>Pause every</label><span><input id="wordsEvery" type="number" min="0" max="500" step="1" value="0"> words for <input id="wordsPause" type="number" min="0" max="30" step="0.5" value="2"> s</span></div>
-      <div class="row opt"><label>Pause after each sentence</label><span><input id="sentPause" type="number" min="0" max="30" step="0.5" value="0"> s</span></div>
-      <div class="hint">Pauses are the exact length you set. 0 turns a pause off.</div>
+      <div class="opts">
+        <div class="line"><label for="wordsEvery">Pause every</label><span class="unit"><input id="wordsEvery" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="3" value="0"> words</span></div>
+        <div class="line"><label for="wordsPause">Then pause for</label><span class="unit"><input id="wordsPause" class="num" type="text" inputmode="decimal" autocomplete="off" maxlength="5" value="2"> sec</span></div>
+        <div class="line"><label for="sentPause">After each sentence</label><span class="unit"><input id="sentPause" class="num" type="text" inputmode="decimal" autocomplete="off" maxlength="5" value="0"> sec</span></div>
+      </div>
       <div>
         <button class="primary" id="start">Begin insertion</button>
         <button id="pause">Pause</button>
@@ -41,13 +42,13 @@
         <button id="stop">Stop and reset</button>
       </div>
       <div class="foot">
-        <div id="state" role="status">Paste your text, click where you want it in the document, then begin insertion.</div>
+        <div id="state" role="status">Click in the doc, then Begin</div>
         <div class="version" id="version"></div>
       </div>
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.05";
+  const VERSION = "1.06";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -60,10 +61,40 @@
   let sending = false;
   let wordsSincePause = 0;
 
-  // Prevent toolbar buttons from moving the Docs caret. Other controls remain usable while paused.
+  // Prevent toolbar buttons from moving the Docs caret.
   shadow.addEventListener("mousedown", event => {
     if (event.target instanceof HTMLButtonElement) event.preventDefault();
   });
+
+  // Number fields accept digits only; the seconds fields also accept one "." and at most two decimals.
+  const cleanNumber = (el, decimals) => {
+    let value = el.value.replace(decimals ? /[^0-9.]/g : /[^0-9]/g, "");
+    if (decimals) {
+      const dot = value.indexOf(".");
+      if (dot !== -1) value = value.slice(0, dot + 1) + value.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+    }
+    if (el.value !== value) el.value = value;
+  };
+  const commitNumber = (el, decimals, max) => {
+    let n = parseFloat(el.value);
+    if (!Number.isFinite(n)) n = 0;
+    n = Math.min(max, Math.max(0, n));
+    el.value = decimals ? String(Math.round(n * 100) / 100) : String(Math.floor(n));
+  };
+  const numberFields = [
+    { id: "wordsEvery", decimals: false, max: 500 },
+    { id: "wordsPause", decimals: true, max: 30 },
+    { id: "sentPause", decimals: true, max: 30 }
+  ];
+  for (const { id, decimals, max } of numberFields) {
+    const el = $(id);
+    el.addEventListener("beforeinput", event => {
+      if (event.data && !(decimals ? /^[0-9.]+$/ : /^[0-9]+$/).test(event.data)) event.preventDefault();
+    });
+    el.addEventListener("input", () => cleanNumber(el, decimals));
+    el.addEventListener("blur", () => commitNumber(el, decimals, max));
+  }
+  const commitAllNumbers = () => numberFields.forEach(({ id, decimals, max }) => commitNumber($(id), decimals, max));
 
   const findEditor = () => {
     const frame = document.querySelector("iframe.docs-texteventtarget-iframe");
@@ -75,14 +106,14 @@
   };
 
   const focusDocumentEditor = () => {
-    if (!activeEditor?.isConnected) throw new Error("Google Docs editor is no longer available.");
+    if (!activeEditor?.isConnected) throw new Error("Docs editor is no longer available.");
     // Release focus from any toolbar control so text can never land in the toolbar.
     const held = shadow.activeElement;
     if (held && typeof held.blur === "function") held.blur();
     const frame = document.querySelector("iframe.docs-texteventtarget-iframe");
     try { frame?.contentWindow?.focus(); } catch {}
     activeEditor.focus({ preventScroll: true });
-    if (shadow.activeElement) throw new Error("Could not return focus to Google Docs, so insertion stopped to avoid typing in the toolbar.");
+    if (shadow.activeElement) throw new Error("Lost focus on the document.");
   };
 
   const syncControls = () => {
@@ -110,13 +141,13 @@
     return Math.max(8, delay);
   };
 
-  // Fixed, user-chosen pauses (in milliseconds). Nothing here is random.
-  const seconds = id => Math.max(0, Math.min(30, Number($(id).value) || 0)) * 1000;
+  // Fixed, user-chosen pauses (in milliseconds, to 0.01 s). Nothing here is random.
+  const seconds = id => Math.round(Math.max(0, Math.min(30, parseFloat($(id).value) || 0)) * 100) * 10;
   const scheduledPause = (char, prev, next) => {
     let ms = 0;
     // A word has just ended when whitespace follows a non-whitespace character.
     if (/\s/.test(char) && prev && !/\s/.test(prev)) {
-      const every = Math.floor(Number($("wordsEvery").value) || 0);
+      const every = Math.floor(parseFloat($("wordsEvery").value) || 0);
       wordsSincePause += 1;
       if (every > 0 && wordsSincePause >= every) {
         ms += seconds("wordsPause");
@@ -155,7 +186,7 @@
     if (!running || paused || sending) return;
     const source = $("text").value;
     if (sourceIndex >= source.length) {
-      await finish("Finished. Ready to insert the same text again.", true);
+      await finish("Done", true);
       return;
     }
     const char = source[sourceIndex];
@@ -169,16 +200,17 @@
       if (!running) return;
       sourceIndex += 1;
       const extra = scheduledPause(char, source[sourceIndex - 2] || "", source[sourceIndex] || "");
-      state("Inserted " + sourceIndex + " of " + source.length + " characters." + (extra ? " Pausing " + (extra / 1000) + " s…" : ""));
+      // If Pause was pressed while this character was in flight, keep showing "Paused".
+      if (!paused) state(sourceIndex + " / " + source.length + (extra ? " · wait " + extra / 1000 + "s" : ""));
       if (!running || paused) return;
       if (sourceIndex >= source.length) {
-        await finish("Finished. Ready to insert the same text again.", true);
+        await finish("Done", true);
         return;
       }
       timer = setTimeout(step, paceDelay(char) + extra);
     } catch (error) {
       sending = false;
-      // If the user already stopped the run, keep the "Stopped and reset" message instead of a stale error.
+      // If the user already stopped the run, keep the "Stopped" message instead of a stale error.
       if (!running) return;
       await finish("Stopped: " + error.message);
     }
@@ -187,13 +219,14 @@
   $("speed").addEventListener("input", () => { $("speedval").textContent = $("speed").value; });
   $("start").addEventListener("click", async () => {
     const source = $("text").value;
-    if (!source) return state("Paste or type text before starting.");
+    if (!source) return state("Add text first");
     if (running) return;
+    commitAllNumbers();
     activeEditor = findEditor();
-    if (!activeEditor) return state("Google Docs editor not found. Reload the document and try again.");
+    if (!activeEditor) return state("Docs editor not found. Reload the tab.");
     try {
       focusDocumentEditor();
-      state("Connecting to Google Docs…");
+      state("Connecting…");
       await send({ type: "ACCESSDRAFT_ATTACH" });
       attached = true;
       running = true;
@@ -201,7 +234,7 @@
       if (sourceIndex >= source.length) sourceIndex = 0;
       if (sourceIndex === 0) wordsSincePause = 0;
       syncControls();
-      state("Connected. Inserting text progressively…");
+      state("Typing…");
       void step();
     } catch (error) {
       await finish("Could not connect: " + error.message);
@@ -214,7 +247,7 @@
     clearTimeout(timer);
     timer = null;
     syncControls();
-    state("Paused at character " + sourceIndex + " of " + $("text").value.length + ". Press Resume to continue, or Stop and reset to change settings.");
+    state("Paused");
   });
 
   $("resume").addEventListener("click", () => {
@@ -231,11 +264,11 @@
   });
 
   $("stop").addEventListener("click", () => {
-    void finish("Stopped and reset. The next start begins from the beginning.", true);
+    void finish("Stopped", true);
   });
 
   $("close").addEventListener("click", () => {
-    void finish("Connector closed.");
+    void finish("Closed");
     host.remove();
   });
 
