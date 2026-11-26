@@ -40,7 +40,7 @@ To update the extension after pulling new code, return to `chrome://extensions` 
 - Pause preserves the current position so you can resume.
 - Stop and reset ends the run and returns the source position to the beginning. It is a single button in the extension, the bookmarklet and the web app preview.
 - Completing an insertion resets the source position automatically.
-- Variable pacing adjusts the interval around the selected speed. Punctuation and paragraph breaks add extra pauses. These are pacing controls, not simulated typing errors.
+- Variable pacing adjusts the interval around the selected speed. Punctuation adds short extra pauses. These are pacing controls, not simulated typing errors.
 
 ## Standard website connector
 
@@ -60,5 +60,5 @@ The Vite PWA plugin generates the web manifest and service worker during product
 - The standard bookmarklet reports characters sent and dispatches input events. A webpage may still reject or transform them.
 - The Google Docs extension uses Chrome's debugger permission and sends text through the DevTools Protocol. It requires Chrome, the extension to be enabled, and the document tab to remain open and focused.
 - The extension's Google Docs focus and pacing fixes need live testing after reload.
-- Randomized pauses intended to imitate human typing are not included. Use the explicit punctuation and paragraph pauses for predictable pacing.
+- Pauses are fixed and set by you, not random. In the Google Docs toolbar you can pause for an exact number of seconds after every N words and after each sentence. Setting a value to 0 turns that pause off. There is no paragraph pause.
 - Test the connector on each target website before relying on it for important work.

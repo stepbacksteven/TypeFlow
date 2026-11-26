@@ -20,6 +20,10 @@
       #state{flex:1;color:#687087;font-size:10.5px;line-height:1.35;min-height:28px}
       .close{border:0;font-size:18px;background:transparent;padding:2px}
       label{font-size:12px}
+      .opt{margin-top:6px}
+      .opt span,.opt input{font-size:12px}
+      input[type=number]{width:54px;border:1px solid #dfe3ef;border-radius:6px;padding:4px 6px;color:#20283a;background:#fff}
+      .hint{font-size:10.5px;color:#8a92a6;margin-top:4px}
       .version{flex:none;white-space:nowrap;text-align:right;font-size:10px;color:#8a92a6}
     </style>
     <section>
@@ -27,6 +31,9 @@
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50"></div>
       <div class="row"><label><input id="variable" type="checkbox" checked> Timing variation</label><label><input id="pauses" type="checkbox" checked> Punctuation pauses</label></div>
+      <div class="row opt"><label>Pause every</label><span><input id="wordsEvery" type="number" min="0" max="500" step="1" value="0"> words for <input id="wordsPause" type="number" min="0" max="30" step="0.5" value="2"> s</span></div>
+      <div class="row opt"><label>Pause after each sentence</label><span><input id="sentPause" type="number" min="0" max="30" step="0.5" value="0"> s</span></div>
+      <div class="hint">Pauses are the exact length you set. 0 turns a pause off.</div>
       <div>
         <button class="primary" id="start">Begin insertion</button>
         <button id="pause">Pause</button>
@@ -40,7 +47,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.04";
+  const VERSION = "1.05";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -51,6 +58,7 @@
   let attached = false;
   let activeEditor = null;
   let sending = false;
+  let wordsSincePause = 0;
 
   // Prevent toolbar buttons from moving the Docs caret. Other controls remain usable while paused.
   shadow.addEventListener("mousedown", event => {
@@ -83,21 +91,41 @@
     $("speed").disabled = running;
     $("variable").disabled = running;
     $("pauses").disabled = running;
+    $("wordsEvery").disabled = running;
+    $("wordsPause").disabled = running;
+    $("sentPause").disabled = running;
     $("start").disabled = running;
     $("pause").disabled = !running || paused;
     $("resume").disabled = !running || !paused;
     $("stop").disabled = !running;
   };
 
-  const paceDelay = (char, next) => {
+  const paceDelay = char => {
     // 12,000 ms per character at 1 WPM assumes five characters per word.
     let delay = 12000 / Number($("speed").value);
     if ($("variable").checked) delay *= 0.82 + Math.random() * 0.36;
     if (char === " " || char === "\t") delay += 75;
     if ($("pauses").checked && /[,;:]/.test(char)) delay += 180;
     if ($("pauses").checked && /[.!?]/.test(char)) delay += 350;
-    if (char === "\n" && next === "\n") delay += 650;
     return Math.max(8, delay);
+  };
+
+  // Fixed, user-chosen pauses (in milliseconds). Nothing here is random.
+  const seconds = id => Math.max(0, Math.min(30, Number($(id).value) || 0)) * 1000;
+  const scheduledPause = (char, prev, next) => {
+    let ms = 0;
+    // A word has just ended when whitespace follows a non-whitespace character.
+    if (/\s/.test(char) && prev && !/\s/.test(prev)) {
+      const every = Math.floor(Number($("wordsEvery").value) || 0);
+      wordsSincePause += 1;
+      if (every > 0 && wordsSincePause >= every) {
+        ms += seconds("wordsPause");
+        wordsSincePause = 0;
+      }
+    }
+    // A sentence has ended when . ! or ? is followed by whitespace or the end of the text.
+    if (/[.!?]/.test(char) && (next === "" || /\s/.test(next))) ms += seconds("sentPause");
+    return ms;
   };
 
   const send = message => new Promise((resolve, reject) => {
@@ -113,7 +141,7 @@
     paused = false;
     clearTimeout(timer);
     timer = null;
-    if (resetPosition) sourceIndex = 0;
+    if (resetPosition) { sourceIndex = 0; wordsSincePause = 0; }
     state(message);
     syncControls();
     if (attached) {
@@ -140,13 +168,14 @@
       // Stop/reset or close may have happened while this character was in flight. Don't advance the reset position.
       if (!running) return;
       sourceIndex += 1;
-      state("Inserted " + sourceIndex + " of " + source.length + " characters.");
+      const extra = scheduledPause(char, source[sourceIndex - 2] || "", source[sourceIndex] || "");
+      state("Inserted " + sourceIndex + " of " + source.length + " characters." + (extra ? " Pausing " + (extra / 1000) + " s…" : ""));
       if (!running || paused) return;
       if (sourceIndex >= source.length) {
         await finish("Finished. Ready to insert the same text again.", true);
         return;
       }
-      timer = setTimeout(step, paceDelay(char, source[sourceIndex] || ""));
+      timer = setTimeout(step, paceDelay(char) + extra);
     } catch (error) {
       sending = false;
       // If the user already stopped the run, keep the "Stopped and reset" message instead of a stale error.
@@ -170,6 +199,7 @@
       running = true;
       paused = false;
       if (sourceIndex >= source.length) sourceIndex = 0;
+      if (sourceIndex === 0) wordsSincePause = 0;
       syncControls();
       state("Connected. Inserting text progressively…");
       void step();
