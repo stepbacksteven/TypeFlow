@@ -17,6 +17,8 @@
   "devDependencies": {
     "typescript": "~5.7.2",
     "vite": "^6.0.0",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
   }
 }
