@@ -19,6 +19,7 @@
       #state{color:#687087;font-size:12px;margin-top:8px;line-height:1.4;min-height:30px}
       .close{border:0;font-size:18px;background:transparent;padding:2px}
       label{font-size:12px}
+      .version{text-align:right;font-size:10px;color:#8a92a6;margin-top:6px}
     </style>
     <section>
       <header><span>AccessDraft · Google Docs</span><button class="close" id="close" title="Close">×</button></header>
@@ -32,9 +33,13 @@
         <button id="stop">Stop and reset</button>
       </div>
       <div id="state" role="status">Paste your text, click where you want it in the document, then begin insertion.</div>
+      <div class="version" id="version"></div>
     </section>`;
 
+  // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
+  const VERSION = "1.03";
   const $ = id => shadow.getElementById(id);
+  $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
   let sourceIndex = 0;
   let running = false;
