@@ -71,7 +71,7 @@ export default function App() {
     setMessage("Insertion preview is running here. Use the browser connector on the destination page to insert into its field.");
   };
   const pause = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; if (stateRef.current === "running") setRun("paused"); };
-  const stop = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; setRun("stopped"); };
+  const stop = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; indexRef.current = 0; setIndex(0); setRun("stopped"); setMessage("Stopped and reset to the beginning."); };
   const reset = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; indexRef.current = 0; setIndex(0); setRun("idle"); };
   const paste = async () => { try { const value = await navigator.clipboard.readText(); setText(value); setMessage("Text pasted. Review it before insertion."); } catch { setMessage("Clipboard access was blocked. Use Ctrl + V inside the Assisted Input box."); } };
   const copyBookmarklet = async () => { try { await navigator.clipboard.writeText(bookmarklet); setMessage("Bookmarklet copied. Create a bookmark and paste it into the bookmark URL field."); } catch { setMessage("Clipboard permission was blocked. Select and copy the bookmarklet text below."); } };
@@ -129,8 +129,7 @@ export default function App() {
             <div className="run-controls">
               <button className="primary-button" disabled={!text || status === "running"} onClick={begin}>▶ {status === "paused" ? "Resume preview" : "Preview pacing"}</button>
               <button className="outline-button" disabled={status !== "running"} onClick={pause}>Pause</button>
-              <button className="danger-button" disabled={status !== "running" && status !== "paused"} onClick={stop}>Stop</button>
-              <button className="text-button" onClick={reset}>Reset</button>
+              <button className="danger-button" disabled={status !== "running" && status !== "paused"} onClick={stop}>Stop and reset</button>
             </div>
             <div className="status-message" role="status">{status === "running" ? "Pacing preview running" : status === "paused" ? "Paused at current position" : status === "done" ? "Preview completed" : status === "stopped" ? "Stopped" : "Ready"} · {message}</div>
           </section>

@@ -60,15 +60,21 @@
 
   const focusDocumentEditor = () => {
     if (!activeEditor?.isConnected) throw new Error("Google Docs editor is no longer available.");
+    // Release focus from any toolbar control so text can never land in the toolbar.
+    const held = shadow.activeElement;
+    if (held && typeof held.blur === "function") held.blur();
+    const frame = document.querySelector("iframe.docs-texteventtarget-iframe");
+    try { frame?.contentWindow?.focus(); } catch {}
     activeEditor.focus({ preventScroll: true });
+    if (shadow.activeElement) throw new Error("Could not return focus to Google Docs, so insertion stopped to avoid typing in the toolbar.");
   };
 
   const syncControls = () => {
-    const locked = running && !paused;
+    // Everything except Pause/Resume/Stop is locked for the whole run, including while paused.
     $("text").disabled = running;
-    $("speed").disabled = locked;
-    $("variable").disabled = locked;
-    $("pauses").disabled = locked;
+    $("speed").disabled = running;
+    $("variable").disabled = running;
+    $("pauses").disabled = running;
     $("start").disabled = running;
     $("pause").disabled = !running || paused;
     $("resume").disabled = !running || !paused;
@@ -170,7 +176,7 @@
     clearTimeout(timer);
     timer = null;
     syncControls();
-    state("Paused at character " + sourceIndex + " of " + $("text").value.length + ". You can now change the speed and pacing settings.");
+    state("Paused at character " + sourceIndex + " of " + $("text").value.length + ". Press Resume to continue, or Stop and reset to change settings.");
   });
 
   $("resume").addEventListener("click", () => {

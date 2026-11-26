@@ -36,9 +36,9 @@ To update the extension after pulling new code, return to `chrome://extensions` 
 
 ## Pacing and controls
 
-- WPM controls are locked while insertion runs. Pause before changing speed or pacing options.
+- The text box and pacing controls are locked for the whole Google Docs run, including while paused, so text can never land in the toolbar. Use Stop and reset to change them.
 - Pause preserves the current position so you can resume.
-- Stop and reset ends the run and returns the source position to the beginning.
+- Stop and reset ends the run and returns the source position to the beginning. It is a single button in the extension, the bookmarklet and the web app preview.
 - Completing an insertion resets the source position automatically.
 - Variable pacing adjusts the interval around the selected speed. Punctuation and paragraph breaks add extra pauses. These are pacing controls, not simulated typing errors.
 
