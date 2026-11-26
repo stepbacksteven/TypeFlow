@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { loadSettings, saveSettings, type Preferences } from "./db";
 import { bookmarklet } from "./bookmarklet";
 
@@ -74,14 +74,14 @@ export default function App() {
     if (!Ctor) { setMessage("Speech recognition is unavailable in this browser. Try a supported version of Chrome."); return; }
     const rec = new Ctor(); recognition.current = rec; rec.continuous = true; rec.interimResults = true; rec.lang = navigator.language || "en-US";
     let finalText = "";
-    rec.onresult = (event: any) => { let interim = ""; for (let i = event.resultIndex; i < event.results.length; i++) { const part = event.results[i][0].transcript; if (event.results[i].isFinal) finalText += part + " "; else interim += part; } const committed = finalText; finalText = ""; if (committed) setText(v => v + committed); };
+    rec.onresult = (event: any) => { for (let i = event.resultIndex; i < event.results.length; i++) { const part = event.results[i][0].transcript; if (event.results[i].isFinal) finalText += part + " "; } const committed = finalText; finalText = ""; if (committed) setText(v => v + committed); };
     rec.onerror = () => { setListening(false); setMessage("Speech recognition stopped. Review the text before insertion."); };
     rec.onend = () => setListening(false);
     rec.start(); setListening(true); setMessage("Listening. Speech recognition may process audio through your browser provider.");
   };
   const install = async () => { if (!installPrompt) return; await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); };
 
-  return <div className={`app-shell ${prefs.dark ? "dark" : ""} ${prefs.highContrast ? "contrast" : ""} ${prefs.largeButtons ? "large-controls" : ""} ${prefs.clutterFree ? "clutter-free" : ""} ${prefs.dyslexia ? "dyslexia" : ""}`} style={{ "--input-size": prefs.fontSize + "px" } as React.CSSProperties}>
+  return <div className={`app-shell ${prefs.dark ? "dark" : ""} ${prefs.highContrast ? "contrast" : ""} ${prefs.largeButtons ? "large-controls" : ""} ${prefs.clutterFree ? "clutter-free" : ""} ${prefs.dyslexia ? "dyslexia" : ""}`} style={{ "--input-size": prefs.fontSize + "px" } as CSSProperties}>
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark">A</span><span>AccessDraft</span></div>
       <p className="side-label">ACCESSIBILITY TOOL</p>
