@@ -123,9 +123,9 @@
       focusDocumentEditor();
       await send({ type: "ACCESSDRAFT_INSERT", text: char });
       sending = false;
-      if (!running || paused) return;
       sourceIndex += 1;
       state("Inserted " + sourceIndex + " of " + source.length + " characters.");
+      if (!running || paused) return;
       if (sourceIndex >= source.length) {
         await finish("Finished. Ready to insert the same text again.", true);
         return;
