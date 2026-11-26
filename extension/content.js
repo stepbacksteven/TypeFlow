@@ -16,9 +16,11 @@
       button{border:1px solid #d9deea;background:#f7f8fc;color:#263248;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0}
       button.primary{background:#315fce;color:white;border-color:#315fce}
       button:disabled,input:disabled,textarea:disabled{opacity:.48;cursor:not-allowed}
-      #state{color:#687087;font-size:12px;margin-top:8px;line-height:1.4;min-height:30px}
+      .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:8px}
+      #state{flex:1;color:#687087;font-size:10.5px;line-height:1.35;min-height:28px}
       .close{border:0;font-size:18px;background:transparent;padding:2px}
       label{font-size:12px}
+      .version{flex:none;white-space:nowrap;text-align:right;font-size:10px;color:#8a92a6}
     </style>
     <section>
       <header><span>AccessDraft · Google Docs</span><button class="close" id="close" title="Close">×</button></header>
@@ -31,10 +33,16 @@
         <button id="resume">Resume</button>
         <button id="stop">Stop and reset</button>
       </div>
-      <div id="state" role="status">Paste your text, click where you want it in the document, then begin insertion.</div>
+      <div class="foot">
+        <div id="state" role="status">Paste your text, click where you want it in the document, then begin insertion.</div>
+        <div class="version" id="version"></div>
+      </div>
     </section>`;
 
+  // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
+  const VERSION = "1.04";
   const $ = id => shadow.getElementById(id);
+  $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
   let sourceIndex = 0;
   let running = false;
