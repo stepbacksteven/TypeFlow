@@ -5,6 +5,7 @@ export type Preferences = {
   fontSize:number; dyslexia:boolean; highContrast:boolean; largeButtons:boolean;
   clutterFree:boolean; speechRate:number;
 };
+if (typeof indexedDB !== "undefined") { indexedDB.deleteDatabase("accessdraft-local"); }
 const dbPromise = openDB("accessdraft-settings", 1, {
   upgrade(db) { if (!db.objectStoreNames.contains("preferences")) db.createObjectStore("preferences"); }
 });
