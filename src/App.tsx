@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { loadSettings, saveSettings, type Preferences } from "./db";
 import { bookmarklet } from "./bookmarklet";
 
@@ -21,32 +21,47 @@ export default function App() {
   const indexRef = useRef(0);
   const stateRef = useRef<RunState>("idle");
   const recognition = useRef<any>(null);
-  const speechVoices = useMemo(() => typeof speechSynthesis !== "undefined" ? speechSynthesis.getVoices() : [], []);
+  const [speechVoices, setSpeechVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const textRef = useRef("");
+  const prefsRef = useRef<Preferences>(defaults);
 
+  // Chrome often returns an empty voice list until the voiceschanged event fires.
+  useEffect(() => {
+    if (typeof speechSynthesis === "undefined") return;
+    const load = () => setSpeechVoices(speechSynthesis.getVoices());
+    load();
+    speechSynthesis.addEventListener("voiceschanged", load);
+    return () => speechSynthesis.removeEventListener("voiceschanged", load);
+  }, []);
   useEffect(() => { loadSettings().then(s => { if (s) setPrefs({ ...defaults, ...s }); setLoaded(true); }); }, []);
   useEffect(() => { if (loaded) void saveSettings(prefs); }, [prefs, loaded]);
   useEffect(() => { const h = (e: Event) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener("beforeinstallprompt", h); return () => window.removeEventListener("beforeinstallprompt", h); }, []);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); recognition.current?.stop?.(); }, []);
 
+  textRef.current = text;
+  prefsRef.current = prefs;
   const update = (patch: Partial<Preferences>) => setPrefs(p => ({ ...p, ...patch }));
   const setRun = (s: RunState) => { stateRef.current = s; setStatus(s); };
   const progress = text.length ? Math.min(100, Math.round(index / text.length * 100)) : 0;
+  // Read prefs/text through refs so changes made while the preview runs are honored.
   const paceDelay = (char: string, next: string) => {
-    let ms = 12000 / prefs.wpm;
-    if (prefs.variable) ms *= 0.82 + Math.random() * 0.36;
-    if (char === " " || char === "\t") ms += prefs.wordPause;
-    if (prefs.punctuation && /[,;:]/.test(char)) ms += 220;
-    if (prefs.punctuation && /[.!?]/.test(char)) ms += prefs.sentencePause;
-    if (char === "\n" && next === "\n") ms += prefs.paragraphPause;
+    const p = prefsRef.current;
+    let ms = 12000 / p.wpm;
+    if (p.variable) ms *= 0.82 + Math.random() * 0.36;
+    if (char === " " || char === "\t") ms += p.wordPause;
+    if (p.punctuation && /[,;:]/.test(char)) ms += 220;
+    if (p.punctuation && /[.!?]/.test(char)) ms += p.sentencePause;
+    if (char === "\n" && next === "\n") ms += p.paragraphPause;
     return Math.max(8, ms);
   };
   const tick = () => {
     if (stateRef.current !== "running") return;
+    const source = textRef.current;
     const nextIndex = indexRef.current + 1;
     indexRef.current = nextIndex;
     setIndex(nextIndex);
-    if (nextIndex >= text.length) { indexRef.current = 0; setIndex(0); setRun("done"); return; }
-    timer.current = window.setTimeout(tick, paceDelay(text[nextIndex - 1], text[nextIndex]));
+    if (nextIndex >= source.length) { indexRef.current = 0; setIndex(source.length); setRun("done"); return; }
+    timer.current = window.setTimeout(tick, paceDelay(source[nextIndex - 1], source[nextIndex]));
   };
   const begin = () => {
     if (!text) { setMessage("Add text to Assisted Input before starting."); return; }

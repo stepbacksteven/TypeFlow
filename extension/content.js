@@ -123,6 +123,8 @@
       focusDocumentEditor();
       await send({ type: "ACCESSDRAFT_INSERT", text: char });
       sending = false;
+      // Stop/reset or close may have happened while this character was in flight. Don't advance the reset position.
+      if (!running) return;
       sourceIndex += 1;
       state("Inserted " + sourceIndex + " of " + source.length + " characters.");
       if (!running || paused) return;
@@ -133,6 +135,8 @@
       timer = setTimeout(step, paceDelay(char, source[sourceIndex] || ""));
     } catch (error) {
       sending = false;
+      // If the user already stopped the run, keep the "Stopped and reset" message instead of a stale error.
+      if (!running) return;
       await finish("Stopped: " + error.message);
     }
   };
