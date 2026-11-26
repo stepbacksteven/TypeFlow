@@ -74,7 +74,7 @@ export default function App() {
     if (!Ctor) { setMessage("Speech recognition is unavailable in this browser. Try a supported version of Chrome."); return; }
     const rec = new Ctor(); recognition.current = rec; rec.continuous = true; rec.interimResults = true; rec.lang = navigator.language || "en-US";
     let finalText = "";
-    rec.onresult = (event: any) => { let interim = ""; for (let i = event.resultIndex; i < event.results.length; i++) { const part = event.results[i][0].transcript; if (event.results[i].isFinal) finalText += part + " "; else interim += part; } setText(v => v + (finalText ? finalText : "") + (interim ? "" : "")); finalText = ""; };
+    rec.onresult = (event: any) => { let interim = ""; for (let i = event.resultIndex; i < event.results.length; i++) { const part = event.results[i][0].transcript; if (event.results[i].isFinal) finalText += part + " "; else interim += part; } const committed = finalText; finalText = ""; if (committed) setText(v => v + committed); };
     rec.onerror = () => { setListening(false); setMessage("Speech recognition stopped. Review the text before insertion."); };
     rec.onend = () => setListening(false);
     rec.start(); setListening(true); setMessage("Listening. Speech recognition may process audio through your browser provider.");
@@ -98,7 +98,7 @@ export default function App() {
           <section className="panel input-panel">
             <div className="panel-heading"><div><h2>Your text</h2><p>Text stays in this box until you choose to clear it.</p></div><span className="counter">{countWords(text)} words · {text.length.toLocaleString()} characters</span></div>
             <textarea className="assisted-text" value={text} onChange={e => { setText(e.target.value); if (status !== "running") reset(); }} placeholder="Type or paste your text here. Your wording and paragraph breaks will be preserved." spellCheck aria-label="Assisted Input text" />
-            <div className="input-actions"><div><button className="outline-button" onClick={paste}>Paste text</button><button className="text-button" onClick={() => { setText(""); reset(); }}>Clear text</button></div><button className="text-button" onClick={() => { const el = document.querySelector<HTMLTextAreaElement>(".assisted-text"); el?.select(); }}>Select all</button></div>
+            <div className="input-actions"><div><button className="outline-button" onClick={paste}>Paste text</button><button className="outline-button" onClick={async()=>{try{await navigator.clipboard.writeText(text);setMessage("Text copied. Open the browser connector on your destination page and paste it into its Assisted Input box.");}catch{setMessage("Clipboard access was blocked. Select all and copy with Ctrl + C.");}}}>Copy for connector</button><button className="text-button" onClick={() => { setText(""); reset(); }}>Clear text</button></div><button className="text-button" onClick={() => { const el = document.querySelector<HTMLTextAreaElement>(".assisted-text"); el?.select(); }}>Select all</button></div>
             <div className="dictation-row"><div><strong>Speech-to-text</strong><small>Optional. Review recognized words before using them.</small></div>{!listening ? <button className="outline-button" onClick={startDictation}>Start microphone</button> : <button className="danger-button" onClick={() => { recognition.current?.stop?.(); setListening(false); }}>Stop listening</button>}</div>
             <div className="tts-row"><div><strong>Read aloud</strong><small>Secondary listening support</small></div><div className="tts-controls"><button className="outline-button" onClick={() => readAloud()}>Play</button><button className="text-button" onClick={() => speechSynthesis.pause()}>Pause</button><button className="text-button" onClick={() => speechSynthesis.resume()}>Resume</button><button className="text-button" onClick={() => speechSynthesis.cancel()}>Stop</button></div></div>
           </section>
@@ -112,12 +112,12 @@ export default function App() {
             <label className="toggle-line"><span><strong>Punctuation pauses</strong><small>Pause slightly longer after punctuation</small></span><input type="checkbox" checked={prefs.punctuation} onChange={e => update({punctuation:e.target.checked})}/></label>
             <div className="progress-block"><div className="progress-top"><strong>Insertion progress</strong><span>{progress}%</span></div><div className="progress-track"><div style={{width: progress + "%"}} /></div><div className="progress-stats"><span>{index.toLocaleString()} / {text.length.toLocaleString()} characters</span><span>{Math.max(0,text.length-index).toLocaleString()} remaining</span></div></div>
             <div className="run-controls">
-              <button className="primary-button" disabled={!text || status === "running"} onClick={begin}>▶ {status === "paused" ? "Resume insertion" : "Begin insertion"}</button>
+              <button className="primary-button" disabled={!text || status === "running"} onClick={begin}>▶ {status === "paused" ? "Resume preview" : "Preview pacing"}</button>
               <button className="outline-button" disabled={status !== "running"} onClick={pause}>Pause</button>
               <button className="danger-button" disabled={status !== "running" && status !== "paused"} onClick={stop}>Stop</button>
               <button className="text-button" onClick={reset}>Reset</button>
             </div>
-            <div className="status-message" role="status">{status === "running" ? "Insertion preview running" : status === "paused" ? "Paused at current position" : status === "done" ? "Preview completed" : status === "stopped" ? "Stopped" : "Ready"} · {message}</div>
+            <div className="status-message" role="status">{status === "running" ? "Pacing preview running" : status === "paused" ? "Paused at current position" : status === "done" ? "Preview completed" : status === "stopped" ? "Stopped" : "Ready"} · {message}</div>
           </section>
         </div>
         <div className="destination-note"><span className="destination-icon">⌁</span><div><strong>Writing in another app?</strong><span>Install the bookmarklet connector to insert text progressively into supported fields on the page you are using.</span></div><button className="link-button" onClick={() => setTab("connect")}>Set up connector →</button></div>
