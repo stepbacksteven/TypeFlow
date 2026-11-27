@@ -1,7 +1,7 @@
-<p align="center"><img src="public/typeflow-icon.svg" width="88" alt="TypeFlow logo"></p>
-
 # TypeFlow
-> Version history 1.09
+> Version history 1.10
+>
+> 1.10: Removed redundant timing and punctuation helper text.
 
 ## Important
 
