@@ -49,7 +49,6 @@
         <label title="Gradually shifts the active speed by up to 10 WPM around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
       </div>
-      <div class="hint">Timing variation gently changes your speed. Punctuation pauses add brief waits after punctuation.</div>
       <div class="opts">
         <div class="line"><label for="wordsEvery">Pause every</label><span class="unit"><input id="wordsEvery" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="3" value="0"> words</span></div>
         <div class="line"><label for="wordsPause">Then pause for</label><span class="unit"><input id="wordsPause" class="num" type="text" inputmode="decimal" autocomplete="off" maxlength="5" value="2"> sec</span></div>
@@ -69,7 +68,7 @@
     <button id="reopen" type="button" title="Reopen TypeFlow" aria-label="Reopen TypeFlow"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></button>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.09";
+  const VERSION = "1.10";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
