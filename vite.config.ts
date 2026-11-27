@@ -7,16 +7,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["accessdraft-icon.svg"],
+      includeAssets: ["typeflow-icon.svg"],
       manifest: {
-        name: "AccessDraft",
-        short_name: "AccessDraft",
+        name: "TypeFlow",
+        short_name: "TypeFlow",
         description: "An accessible writing space that keeps your work on your device.",
         theme_color: "#f7f8fc",
         background_color: "#f7f8fc",
         display: "standalone",
         start_url: "/",
-        icons: [{ src: "/accessdraft-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }]
+        icons: [{ src: "/typeflow-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }]
       },
       workbox: { globPatterns: ["**/*.{js,css,html,svg,ico,png,woff2}"] }
     })
