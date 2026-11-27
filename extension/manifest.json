@@ -1,17 +1,25 @@
 {
   "manifest_version": 3,
   "name": "TypeFlow for Google Docs",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Progressively inserts text into Google Docs at an adjustable pace.",
-  "permissions": ["debugger"],
-  "host_permissions": ["https://docs.google.com/*"],
+  "permissions": [
+    "debugger"
+  ],
+  "host_permissions": [
+    "https://docs.google.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://docs.google.com/document/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://docs.google.com/document/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]
