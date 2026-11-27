@@ -3,14 +3,14 @@
 
   const host = document.createElement("div");
   host.id = "typeflow-docs-extension";
-  host.style.cssText = "all:initial;position:fixed;right:18px;top:160px;z-index:2147483647";
+  host.style.cssText = "all:initial;position:fixed;right:40px;top:120px;z-index:2147483647";
   const shadow = host.attachShadow({ mode: "open" });
   shadow.innerHTML = `
     <style>
       *{box-sizing:border-box;font:14px Arial,sans-serif}
-      section{width:354px;background:#fff;color:#293B40;border:1px solid #DCE7E2;border-radius:14px;box-shadow:0 12px 36px rgba(37,65,59,.16);padding:15px}
+      section{width:354px;height:470px;min-width:354px;min-height:470px;max-width:500px;max-height:min(700px,calc(100vh - 32px));resize:both;overflow:auto;background:#fff;color:#293B40;border:1px solid #DCE7E2;border-radius:14px;box-shadow:0 12px 36px rgba(37,65,59,.16);padding:15px}
       header,.row,.line{display:flex;justify-content:space-between;align-items:center;gap:8px}
-      header{font-weight:700;margin-bottom:12px;color:#293B40}
+      header{font-weight:700;margin-bottom:12px;color:#293B40;cursor:grab;user-select:none;touch-action:none}
       .brand{display:flex;align-items:center;gap:9px}
       .brand-mark{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#315E58;box-shadow:0 2px 5px rgba(49,94,88,.18)}
       .brand-mark svg{width:28px;height:28px;display:block}
@@ -68,7 +68,7 @@
     <button id="reopen" type="button" title="Reopen TypeFlow" aria-label="Reopen TypeFlow"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></button>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.10";
+  const VERSION = "1.11";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -89,7 +89,42 @@
     if (event.target instanceof HTMLButtonElement) event.preventDefault();
   });
 
-  const renderSpeed = () => {
+
+  // Drag the toolbar by its header, or move the reopen button when the toolbar is hidden.
+  let reopenDragged = false;
+  const makeDraggable = handle => {
+    let startX = 0, startY = 0, originX = 0, originY = 0, active = false;
+    handle.addEventListener("pointerdown", event => {
+      if (handle === $("panel").querySelector("header") && event.target.closest("button")) return;
+      if (event.button !== 0) return;
+      const rect = host.getBoundingClientRect();
+      startX = event.clientX; startY = event.clientY;
+      originX = rect.left; originY = rect.top; active = true;
+      reopenDragged = false;
+      host.style.left = originX + "px"; host.style.top = originY + "px"; host.style.right = "auto";
+      handle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    handle.addEventListener("pointermove", event => {
+      if (!active) return;
+      const dx = event.clientX - startX, dy = event.clientY - startY;
+      if (handle.id === "reopen" && Math.abs(dx) + Math.abs(dy) > 3) reopenDragged = true;
+      const maxX = Math.max(8, window.innerWidth - host.offsetWidth - 8);
+      const maxY = Math.max(8, window.innerHeight - Math.min(host.offsetHeight, window.innerHeight - 16) - 8);
+      host.style.left = Math.max(8, Math.min(maxX, originX + dx)) + "px";
+      host.style.top = Math.max(8, Math.min(maxY, originY + dy)) + "px";
+    });
+    const endDrag = event => {
+      if (!active) return;
+      active = false;
+      if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+    };
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+  };
+  makeDraggable($("panel").querySelector("header"));
+  makeDraggable($("reopen"));
+\n  const renderSpeed = () => {
     const shown = Math.round(activeWpm);
     $("speed").value = String(shown);
     $("speedval").textContent = String(shown);
@@ -333,6 +368,7 @@
   });
 
   $("reopen").addEventListener("click", () => {
+    if (reopenDragged) { reopenDragged = false; return; }
     $("panel").hidden = false;
     $("reopen").style.display = "none";
   });
