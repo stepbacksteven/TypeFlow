@@ -8,7 +8,7 @@
   shadow.innerHTML = `
     <style>
       *{box-sizing:border-box;font:14px Arial,sans-serif}
-      section{width:354px;height:470px;min-width:354px;min-height:470px;max-width:500px;max-height:calc(100vh - 32px);resize:both;overflow:auto;background:#fff;color:#293B40;border:1px solid #DCE7E2;border-radius:14px;box-shadow:0 12px 36px rgba(37,65,59,.16);padding:15px}
+      section{width:354px;height:470px;min-width:354px;min-height:470px;max-width:500px;max-height:min(700px,calc(100vh - 32px));resize:both;overflow:auto;background:#fff;color:#293B40;border:1px solid #DCE7E2;border-radius:14px;box-shadow:0 12px 36px rgba(37,65,59,.16);padding:15px}
       header,.row,.line{display:flex;justify-content:space-between;align-items:center;gap:8px}
       header{font-weight:700;margin-bottom:12px;color:#293B40;cursor:grab;user-select:none;touch-action:none}
       .brand{display:flex;align-items:center;gap:9px}
