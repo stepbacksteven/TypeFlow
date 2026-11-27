@@ -172,6 +172,8 @@
 
     const lower = Math.max(5, targetWpm - variationMin);
     const upper = Math.min(120, targetWpm + variationMax);
+    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
+    if (variationTargetWpm < lower || variationTargetWpm > upper) variationTargetWpm = activeWpm;
 
     if (Math.abs(variationTargetWpm - activeWpm) < 0.001) {
       // Pick either side in proportion to its setting, then choose any destination
@@ -367,6 +369,7 @@
     // Keep the two controls independent. Normalize their values only for calculations.
     variationMin = Math.max(1, Math.min(99, Number(minInput.value)));
     variationMax = Math.max(1, Math.min(99, Number(maxInput.value)));
+    variationTargetWpm = activeWpm;
     saveSettings();
   };
   const commitVariationInput = id => {
