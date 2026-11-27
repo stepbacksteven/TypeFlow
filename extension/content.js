@@ -8,15 +8,15 @@
   shadow.innerHTML = `
     <style>
       *{box-sizing:border-box;font:14px Arial,sans-serif}
-      section{display:flex;flex-direction:column;width:354px;height:470px;min-width:354px;min-height:470px;max-width:500px;max-height:min(700px,calc(100vh - 32px));resize:both;overflow:auto;background:#fff;color:#293B40;border:1px solid #DCE7E2;border-radius:14px;box-shadow:0 12px 36px rgba(37,65,59,.16);padding:15px}
+      section{display:flex;flex-direction:column;width:354px;height:470px;min-width:min(330px,calc(100vw - 16px));min-height:min(410px,calc(100vh - 32px));max-width:min(500px,calc(100vw - 16px));max-height:min(700px,calc(100vh - 32px));resize:both;overflow:hidden;background:#fff;color:#293B40;border:1px solid #DCE7E2;border-radius:14px;box-shadow:0 12px 36px rgba(37,65,59,.16);padding:15px}
       header,.row,.line{display:flex;justify-content:space-between;align-items:center;gap:8px}
       header{font-weight:700;margin-bottom:12px;color:#293B40;cursor:grab;user-select:none;touch-action:none}
       .brand{display:flex;align-items:center;gap:9px}
       .brand-mark{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#315E58;box-shadow:0 2px 5px rgba(49,94,88,.18)}
       .brand-mark svg{width:28px;height:28px;display:block}
-      textarea{display:block;flex:1 1 0;width:100%;min-width:0;min-height:125px;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
+      textarea{display:block;flex:1 1 auto;width:100%;min-width:0;min-height:0;overflow:auto;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
       textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
-      input[type=range]{-webkit-appearance:none;appearance:none;width:min(45%,220px);min-width:110px;flex:1;height:18px;background:transparent;cursor:pointer}
+      input[type=range]{-webkit-appearance:none;appearance:none;width:min(45%,220px);min-width:110px;flex:1;height:18px;background:transparent;cursor:pointer;touch-action:pan-y}
       input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#315E58,#8AB8A9);border:1px solid #D2E2DA}
       input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border:2px solid #fff;border-radius:50%;background:#315E58;box-shadow:0 1px 4px rgba(35,74,65,.35);transition:transform .12s,box-shadow .12s}
       input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.12);box-shadow:0 0 0 4px rgba(71,127,118,.14)}
@@ -60,7 +60,7 @@
     <section id="panel">
       <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
-      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50" aria-label="Target words per minute"></div>
+      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="0.1" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
         <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
@@ -88,7 +88,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.16";
+  const VERSION = "1.17";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -152,8 +152,8 @@
   makeDraggable($("panel").querySelector("header"));
 
   const renderSpeed = () => {
-    const shown = Math.round(activeWpm);
-    $("speed").value = String(shown);
+    $("speed").value = String(targetWpm);
+    const shown = Number(activeWpm.toFixed(1));
     $("speedval").textContent = String(shown);
   };
 
@@ -343,18 +343,26 @@
     saveSettings();
   });
   $("pauses").addEventListener("change", saveSettings);
-  $("variationMin").addEventListener("blur", () => {
-    commitNumber($("variationMin"), false, 20);
-    variationMin = Math.max(1, Number($("variationMin").value) || 1);
-    if (variationMin > variationMax) { variationMax = variationMin; $("variationMax").value = String(variationMax); }
+  const updateVariationSettings = changedId => {
+    const minInput = $("variationMin");
+    const maxInput = $("variationMax");
+    if (minInput.value === "" || maxInput.value === "") return;
+    let minValue = Math.max(1, Math.min(20, Number(minInput.value)));
+    let maxValue = Math.max(1, Math.min(20, Number(maxInput.value)));
+    if (changedId === "variationMin" && minValue > maxValue) maxValue = minValue;
+    if (changedId === "variationMax" && maxValue < minValue) minValue = maxValue;
+    variationMin = minValue;
+    variationMax = maxValue;
+    minInput.value = String(minValue);
+    maxInput.value = String(maxValue);
     saveSettings();
-  });
-  $("variationMax").addEventListener("blur", () => {
-    commitNumber($("variationMax"), false, 20);
-    variationMax = Math.max(1, Number($("variationMax").value) || 1);
-    if (variationMax < variationMin) { variationMin = variationMax; $("variationMin").value = String(variationMin); }
-    saveSettings();
-  });
+  };
+  $("variationMin").addEventListener("input", () => updateVariationSettings("variationMin"));
+  $("variationMax").addEventListener("input", () => updateVariationSettings("variationMax"));
+  $("variationMin").addEventListener("change", () => { commitNumber($("variationMin"), false, 20); updateVariationSettings("variationMin"); });
+  $("variationMax").addEventListener("change", () => { commitNumber($("variationMax"), false, 20); updateVariationSettings("variationMax"); });
+  $("variationMin").addEventListener("blur", () => { commitNumber($("variationMin"), false, 20); updateVariationSettings("variationMin"); });
+  $("variationMax").addEventListener("blur", () => { commitNumber($("variationMax"), false, 20); updateVariationSettings("variationMax"); });
   $("start").addEventListener("click", async () => {
     const source = $("text").value;
     if (!source) return state("Add text first");
