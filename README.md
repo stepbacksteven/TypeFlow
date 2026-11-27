@@ -1,9 +1,10 @@
 # TypeFlow
-> Version history 1.12
+> Version history 1.13
 >
-> 1.12: Fixed a JavaScript syntax error that prevented the Google Docs toolbar from loading.
-> 1.11: Added draggable positioning and resizing for the Google Docs toolbar.
-> 1.10: Removed redundant timing and punctuation helper text.
+> 1.13
+> 1.12
+> 1.11
+> 1.10
 
 ## Important
 
