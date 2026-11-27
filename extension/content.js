@@ -60,7 +60,7 @@
     <section id="panel">
       <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
-      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="0.1" value="50" aria-label="Target words per minute"></div>
+      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="1" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
         <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
@@ -88,7 +88,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.17";
+  const VERSION = "1.18";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -103,6 +103,7 @@
   let targetWpm = Number($("speed").value);
   let activeWpm = targetWpm;
   let driftCounter = 0;
+  let variationDirection = Math.random() < 0.5 ? -1 : 1;
   let variationMin = 2;
   let variationMax = 20;
   let settingsReady = false;
@@ -152,12 +153,11 @@
   makeDraggable($("panel").querySelector("header"));
 
   const renderSpeed = () => {
-    $("speed").value = String(targetWpm);
-    const shown = Number(activeWpm.toFixed(1));
-    $("speedval").textContent = String(shown);
+    $("speedval").textContent = String(Math.round(activeWpm));
   };
 
-  // Vary speed more visibly, updating every three characters within 20 WPM of the target.
+  // Every three characters, shift directly by a random amount in the selected variation range.
+  // Larger values create larger jumps. At 99 WPM, the speed reaches the available upper and lower limits.
   const updateVariableSpeed = () => {
     if (!$("variable").checked) {
       activeWpm = targetWpm;
@@ -168,13 +168,9 @@
     if (driftCounter % 3 !== 0) return;
     const lower = Math.max(5, targetWpm - variationMax);
     const upper = Math.min(120, targetWpm + variationMax);
-    const distance = activeWpm - targetWpm;
-    const direction = distance === 0 ? (Math.random() < 0.5 ? -1 : 1) : (Math.random() < 0.28 ? -Math.sign(distance) : (Math.random() < 0.5 ? -1 : 1));
     const offset = variationMin + Math.floor(Math.random() * (variationMax - variationMin + 1));
-    const destination = Math.max(lower, Math.min(upper, targetWpm + direction * offset));
-    const stepSize = Math.min(4, Math.max(1, Math.abs(destination - activeWpm)));
-    activeWpm += Math.sign(destination - activeWpm) * stepSize;
-    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
+    activeWpm = Math.max(lower, Math.min(upper, targetWpm + variationDirection * offset));
+    variationDirection *= -1;
     renderSpeed();
   };
 
@@ -197,8 +193,8 @@
     { id: "wordsEvery", decimals: false, max: 500 },
     { id: "wordsPause", decimals: true, max: 30 },
     { id: "sentPause", decimals: true, max: 30 },
-    { id: "variationMin", decimals: false, max: 20 },
-    { id: "variationMax", decimals: false, max: 20 }
+    { id: "variationMin", decimals: false, max: 99 },
+    { id: "variationMax", decimals: false, max: 99 }
   ];
   for (const { id, decimals, max } of numberFields) {
     const el = $(id);
@@ -329,7 +325,8 @@
   };
 
   $("speed").addEventListener("input", () => {
-    targetWpm = Number($("speed").value);
+    targetWpm = Math.round(Number($("speed").value));
+    $("speed").value = String(targetWpm);
     activeWpm = targetWpm;
     driftCounter = 0;
     renderSpeed();
@@ -347,8 +344,8 @@
     const minInput = $("variationMin");
     const maxInput = $("variationMax");
     if (minInput.value === "" || maxInput.value === "") return;
-    let minValue = Math.max(1, Math.min(20, Number(minInput.value)));
-    let maxValue = Math.max(1, Math.min(20, Number(maxInput.value)));
+    let minValue = Math.max(1, Math.min(99, Number(minInput.value)));
+    let maxValue = Math.max(1, Math.min(99, Number(maxInput.value)));
     if (changedId === "variationMin" && minValue > maxValue) maxValue = minValue;
     if (changedId === "variationMax" && maxValue < minValue) minValue = maxValue;
     variationMin = minValue;
@@ -379,6 +376,7 @@
       paused = false;
       activeWpm = targetWpm;
       driftCounter = 0;
+      variationDirection = Math.random() < 0.5 ? -1 : 1;
       if (sourceIndex >= source.length) sourceIndex = 0;
       if (sourceIndex === 0) wordsSincePause = 0;
       renderSpeed();
@@ -428,8 +426,8 @@
     } catch (error) { console.warn("TypeFlow could not restore saved settings.", error); }
     settingsReady = true;
     for (const { id, decimals, max } of numberFields) commitNumber($(id), decimals, max);
-    variationMin = Math.max(1, Math.min(20, Number($("variationMin").value) || 1));
-    variationMax = Math.max(variationMin, Math.min(20, Number($("variationMax").value) || 20));
+    variationMin = Math.max(1, Math.min(99, Number($("variationMin").value) || 1));
+    variationMax = Math.max(variationMin, Math.min(99, Number($("variationMax").value) || 20));
     $("variationMin").value = String(variationMin);
     $("variationMax").value = String(variationMax);
     targetWpm = Number($("speed").value);
