@@ -1,32 +1,38 @@
 (() => {
-  if (window.top !== window || document.getElementById("accessdraft-docs-extension")) return;
+  if (window.top !== window || document.getElementById("typeflow-docs-extension")) return;
 
   const host = document.createElement("div");
-  host.id = "accessdraft-docs-extension";
+  host.id = "typeflow-docs-extension";
   host.style.cssText = "all:initial;position:fixed;right:18px;bottom:18px;z-index:2147483647";
   const shadow = host.attachShadow({ mode: "open" });
   shadow.innerHTML = `
     <style>
       *{box-sizing:border-box;font:14px Arial,sans-serif}
-      section{width:350px;background:#fff;color:#20283a;border:1px solid #dfe3ef;border-radius:14px;box-shadow:0 12px 40px #17213a33;padding:14px}
+      section{width:354px;background:#fff;color:#293B40;border:1px solid #DCE7E2;border-radius:13px;box-shadow:0 10px 32px rgba(37,65,59,.13);padding:15px}
       header,.row,.line{display:flex;justify-content:space-between;align-items:center;gap:8px}
-      header{font-weight:700;margin-bottom:10px}
-      textarea{display:block;width:100%;height:125px;resize:vertical;border:1px solid #dfe3ef;border-radius:8px;padding:9px;line-height:1.5;color:#20283a;background:#fff}
-      input[type=range]{width:145px}
-      button{border:1px solid #d9deea;background:#f7f8fc;color:#263248;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0}
-      button.primary{background:#315fce;color:white;border-color:#315fce}
+      header{font-weight:700;margin-bottom:12px;color:#293B40}
+      .brand{display:flex;align-items:center;gap:9px}
+      .brand-mark{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#EAF3EF;color:#39776F;font-size:12px;font-weight:800}
+      textarea{display:block;width:100%;height:125px;resize:vertical;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
+      textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
+      input[type=range]{width:145px;accent-color:#548B7F}
+      button{border:1px solid #DCE7E2;background:#F7FAF8;color:#405650;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0;transition:background .15s,border-color .15s}
+      button:hover:not(:disabled){background:#EDF4F0;border-color:#C8DAD2}
+      button.primary{background:#477F76;color:white;border-color:#477F76;font-weight:600}
+      button.primary:hover:not(:disabled){background:#386D65;border-color:#386D65}
       button:disabled,input:disabled,textarea:disabled{opacity:.48;cursor:not-allowed}
-      label{font-size:12px}
-      .opts{display:grid;gap:6px;margin:8px 0 6px;padding:8px 10px;background:#f7f8fc;border:1px solid #e8ebf4;border-radius:8px}
-      .unit{display:flex;align-items:center;gap:6px;font-size:12px;color:#687087}
-      .num{width:58px;text-align:right;border:1px solid #dfe3ef;border-radius:6px;padding:4px 6px;font-size:12px;color:#20283a;background:#fff}
-      .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:6px}
-      #state{flex:1;color:#8a92a6;font-size:9.5px;line-height:1.3;min-height:12px}
-      .version{flex:none;white-space:nowrap;text-align:right;font-size:9.5px;color:#8a92a6}
-      .close{border:0;font-size:18px;background:transparent;padding:2px}
+      label{font-size:12px;color:#5E716B}
+      .opts{display:grid;gap:6px;margin:8px 0 6px;padding:9px 10px;background:#F6F9F7;border:1px solid #E6EEEA;border-radius:8px}
+      .unit{display:flex;align-items:center;gap:6px;font-size:12px;color:#71827C}
+      .num{width:58px;text-align:right;border:1px solid #DCE7E2;border-radius:6px;padding:4px 6px;font-size:12px;color:#293B40;background:#fff}
+      .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:7px}
+      #state{flex:1;color:#71827C;font-size:10px;line-height:1.4;min-height:13px}
+      .version{flex:none;white-space:nowrap;text-align:right;font-size:9.5px;color:#9AA9A3}
+      .close{border:0;font-size:18px;background:transparent;padding:2px;color:#71827C}
+      .close:hover{background:#F1F5F2}
     </style>
     <section>
-      <header><span>AccessDraft · Google Docs</span><button class="close" id="close" title="Close">×</button></header>
+      <header><span class="brand"><span class="brand-mark">T</span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span><button class="close" id="close" title="Close">×</button></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50"></div>
       <div class="row"><label><input id="variable" type="checkbox" checked> Timing variation</label><label><input id="pauses" type="checkbox" checked> Punctuation pauses</label></div>
@@ -176,7 +182,7 @@
     state(message);
     syncControls();
     if (attached) {
-      try { await send({ type: "ACCESSDRAFT_DETACH" }); } catch {}
+      try { await send({ type: "TYPEFLOW_DETACH" }); } catch {}
       attached = false;
     }
     activeEditor = null;
@@ -194,7 +200,7 @@
       // Toolbar controls can take focus. Restore Google's editor before every character.
       sending = true;
       focusDocumentEditor();
-      await send({ type: "ACCESSDRAFT_INSERT", text: char });
+      await send({ type: "TYPEFLOW_INSERT", text: char });
       sending = false;
       // Stop/reset or close may have happened while this character was in flight. Don't advance the reset position.
       if (!running) return;
@@ -227,7 +233,7 @@
     try {
       focusDocumentEditor();
       state("Connecting…");
-      await send({ type: "ACCESSDRAFT_ATTACH" });
+      await send({ type: "TYPEFLOW_ATTACH" });
       attached = true;
       running = true;
       paused = false;
