@@ -88,7 +88,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.21";
+  const VERSION = "1.22";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -160,9 +160,8 @@
     $("speedval").textContent = String(Math.round(activeWpm));
   };
 
-  // Choose a new destination only after reaching the previous one.
-  // Move by fractional WPM increments so the slider glides while the label
-  // advances one whole WPM at a time.
+  // Keep variation inside the original speed's independent lower and upper limits.
+  // Larger settings create a wider range and faster movement on their own side.
   const updateVariableSpeed = () => {
     if (!$("variable").checked) {
       activeWpm = targetWpm;
@@ -171,23 +170,28 @@
       return;
     }
 
+    const lower = Math.max(5, targetWpm - variationMin);
+    const upper = Math.min(120, targetWpm + variationMax);
+    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
+    if (variationTargetWpm < lower || variationTargetWpm > upper) variationTargetWpm = activeWpm;
+
     if (Math.abs(variationTargetWpm - activeWpm) < 0.001) {
-      const lower = Math.max(5, targetWpm - variationMax);
-      const upper = Math.min(120, targetWpm + variationMax);
-      const distance = activeWpm - targetWpm;
-      const direction = distance === 0
-        ? (Math.random() < 0.5 ? -1 : 1)
-        : (Math.random() < 0.28 ? -Math.sign(distance) : (Math.random() < 0.5 ? -1 : 1));
-      const offsetMin = Math.min(variationMin, variationMax);
-      const offsetMax = Math.max(variationMin, variationMax);
-      const offset = offsetMin + Math.floor(Math.random() * (offsetMax - offsetMin + 1));
-      variationTargetWpm = Math.max(lower, Math.min(upper, targetWpm + direction * offset));
+      // Pick either side in proportion to its setting, then choose any destination
+      // within that side's range. This avoids bouncing only between the endpoints.
+      const totalVariation = variationMin + variationMax;
+      const goLower = Math.random() * totalVariation < variationMin;
+      const offset = Math.random() * (goLower ? variationMin : variationMax);
+      variationTargetWpm = goLower
+        ? Math.max(lower, targetWpm - offset)
+        : Math.min(upper, targetWpm + offset);
     }
 
     const distanceToTarget = variationTargetWpm - activeWpm;
-    const stepSize = Math.min(0.1, Math.abs(distanceToTarget));
-    activeWpm += Math.sign(distanceToTarget) * stepSize;
-    activeWpm = Math.max(5, Math.min(120, activeWpm));
+    const sideSetting = distanceToTarget < 0 ? variationMin : variationMax;
+    // Quantize movement to the slider's 0.1 WPM precision.
+    const stepSize = Math.max(0.1, Math.round(sideSetting * 0.02 * 10) / 10);
+    activeWpm += Math.sign(distanceToTarget) * Math.min(stepSize, Math.abs(distanceToTarget));
+    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
     renderSpeed();
   };
   // Number fields accept digits only; the seconds fields also accept one "." and at most two decimals.
@@ -365,6 +369,7 @@
     // Keep the two controls independent. Normalize their values only for calculations.
     variationMin = Math.max(1, Math.min(99, Number(minInput.value)));
     variationMax = Math.max(1, Math.min(99, Number(maxInput.value)));
+    variationTargetWpm = activeWpm;
     saveSettings();
   };
   const commitVariationInput = id => {
@@ -449,7 +454,7 @@
     settingsReady = true;
     for (const { id, decimals, max } of numberFields) commitNumber($(id), decimals, max);
     variationMin = Math.max(1, Math.min(99, Number($("variationMin").value) || 1));
-    variationMax = Math.max(variationMin, Math.min(99, Number($("variationMax").value) || 20));
+    variationMax = Math.max(1, Math.min(99, Number($("variationMax").value) || 20));
     $("variationMin").value = String(variationMin);
     $("variationMax").value = String(variationMax);
     targetWpm = Number($("speed").value);
