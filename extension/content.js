@@ -14,7 +14,7 @@
       .brand{display:flex;align-items:center;gap:9px}
       .brand-mark{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#315E58;box-shadow:0 2px 5px rgba(49,94,88,.18)}
       .brand-mark svg{width:28px;height:28px;display:block}
-      textarea{display:block;flex:1 1 125px;width:100%;min-width:0;min-height:125px;resize:both;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
+      textarea{display:block;flex:1 1 0;width:100%;min-width:0;min-height:125px;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
       textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
       input[type=range]{width:145px;accent-color:#477F76}
       button{border:1px solid #DCE7E2;background:#F7FAF8;color:#405650;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0;transition:background .15s,border-color .15s}
@@ -29,8 +29,6 @@
       .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;padding-top:7px;flex:none}
       #state{flex:1;color:#71827C;font-size:10px;line-height:1.4;min-height:13px}
       .version{flex:none;white-space:nowrap;text-align:right;font-size:9.5px;color:#9AA9A3}
-      .close{border:0;font-size:18px;background:transparent;padding:2px;color:#71827C}
-      .close:hover{background:#F1F5F2}
       .checks{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:7px}
       .checks label{display:flex;align-items:center;gap:4px;white-space:nowrap}
       .hint{font-size:10px;line-height:1.4;color:#82928C;margin:5px 1px 2px}
@@ -38,11 +36,9 @@
       .actions button{flex:1;margin:0;padding:8px 5px;white-space:nowrap}
       .actions button.primary{flex:1.1}
       .speed-row{margin-top:5px}
-      #reopen{display:none;width:40px;height:40px;padding:0;border:1px solid #DCE7E2;border-radius:12px;background:#315E58;box-shadow:0 4px 14px rgba(37,65,59,.18);cursor:pointer;place-items:center}
-      #reopen svg{width:28px;height:28px;display:block}
     </style>
     <section id="panel">
-      <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span><button class="close" id="close" title="Close">×</button></header>
+      <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
@@ -65,7 +61,7 @@
         <div class="version" id="version"></div>
       </div>
     </section>
-    <button id="reopen" type="button" title="Reopen TypeFlow" aria-label="Reopen TypeFlow"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></button>`;
+    </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
   const VERSION = "1.13";
@@ -91,7 +87,6 @@
 
 
   // Drag the toolbar by its header, or move the reopen button when the toolbar is hidden.
-  let reopenDragged = false;
   const makeDraggable = handle => {
     let startX = 0, startY = 0, originX = 0, originY = 0, active = false;
     handle.addEventListener("pointerdown", event => {
@@ -100,7 +95,6 @@
       const rect = host.getBoundingClientRect();
       startX = event.clientX; startY = event.clientY;
       originX = rect.left; originY = rect.top; active = true;
-      reopenDragged = false;
       host.style.left = originX + "px"; host.style.top = originY + "px"; host.style.right = "auto";
       handle.setPointerCapture(event.pointerId);
       event.preventDefault();
@@ -108,7 +102,6 @@
     handle.addEventListener("pointermove", event => {
       if (!active) return;
       const dx = event.clientX - startX, dy = event.clientY - startY;
-      if (handle.id === "reopen" && Math.abs(dx) + Math.abs(dy) > 3) reopenDragged = true;
       const maxX = Math.max(8, window.innerWidth - host.offsetWidth - 8);
       const maxY = Math.max(8, window.innerHeight - Math.min(host.offsetHeight, window.innerHeight - 16) - 8);
       host.style.left = Math.max(8, Math.min(maxX, originX + dx)) + "px";
@@ -123,29 +116,6 @@
     handle.addEventListener("pointercancel", endDrag);
   };
   makeDraggable($("panel").querySelector("header"));
-  makeDraggable($("reopen"));
-
-  // Let the text area grow with the panel. If the user resizes the text area,
-  // grow or shrink the panel by the same amount.
-  let textResizeStart = null;
-  $("text").addEventListener("pointerdown", () => {
-    const rect = $("text").getBoundingClientRect();
-    textResizeStart = { width: rect.width, height: rect.height };
-  });
-  $("text").addEventListener("pointerup", () => {
-    if (!textResizeStart) return;
-    const start = textResizeStart;
-    textResizeStart = null;
-    requestAnimationFrame(() => {
-      const area = $("text").getBoundingClientRect();
-      const panel = $("panel");
-      const panelRect = panel.getBoundingClientRect();
-      const width = Math.max(354, Math.min(500, panelRect.width + area.width - start.width));
-      const height = Math.max(470, Math.min(Math.min(700, window.innerHeight - 32), panelRect.height + area.height - start.height));
-      panel.style.width = width + "px";
-      panel.style.height = height + "px";
-    });
-  });
 
   const renderSpeed = () => {
     const shown = Math.round(activeWpm);
@@ -382,18 +352,6 @@
 
   $("stop").addEventListener("click", () => {
     void finish("Reset", true);
-  });
-
-  $("close").addEventListener("click", () => {
-    void finish("Closed");
-    $("panel").hidden = true;
-    $("reopen").style.display = "grid";
-  });
-
-  $("reopen").addEventListener("click", () => {
-    if (reopenDragged) { reopenDragged = false; return; }
-    $("panel").hidden = false;
-    $("reopen").style.display = "none";
   });
 
   renderSpeed();

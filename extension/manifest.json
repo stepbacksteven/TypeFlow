@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TypeFlow for Google Docs",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Progressively inserts text into Google Docs at an adjustable pace.",
   "permissions": [
     "debugger"
