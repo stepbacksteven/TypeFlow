@@ -98,7 +98,7 @@ export default function App() {
 
   return <div className={`app-shell ${prefs.dark ? "dark" : ""} ${prefs.highContrast ? "contrast" : ""} ${prefs.largeButtons ? "large-controls" : ""} ${prefs.clutterFree ? "clutter-free" : ""} ${prefs.dyslexia ? "dyslexia" : ""}`} style={{ "--input-size": prefs.fontSize + "px" } as CSSProperties}>
     <aside className="sidebar">
-      <div className="brand"><span className="brand-mark">A</span><span>AccessDraft</span></div>
+      <div className="brand"><span className="brand-mark">A</span><span>TypeFlow</span></div>
       <p className="side-label">ACCESSIBILITY TOOL</p>
       <button className={tab === "input" ? "nav-item selected" : "nav-item"} onClick={() => setTab("input")}> <span>▤</span> Assisted Input</button>
       <button className={tab === "connect" ? "nav-item selected" : "nav-item"} onClick={() => setTab("connect")}><span>⌁</span> Browser connection</button>
@@ -106,7 +106,7 @@ export default function App() {
       <div className="sidebar-bottom"><span className="status-dot" /> Settings saved on this device <small>No account required</small></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div><span className="crumb-muted">AccessDraft</span><span className="crumb-sep"> / </span><strong>{tab === "input" ? "Assisted Input" : tab === "connect" ? "Connect your browser" : "Settings"}</strong></div><div className="top-actions">{installPrompt && <button className="outline-button" onClick={install}>Install app</button>}<span className="local-label"><i /> Local settings</span></div></header>
+      <header className="topbar"><div><span className="crumb-muted">TypeFlow</span><span className="crumb-sep"> / </span><strong>{tab === "input" ? "Assisted Input" : tab === "connect" ? "Connect your browser" : "Settings"}</strong></div><div className="top-actions">{installPrompt && <button className="outline-button" onClick={install}>Install app</button>}<span className="local-label"><i /> Local settings</span></div></header>
       {tab === "input" && <section className="content">
         <div className="page-heading"><div><p className="eyebrow">PROGRESSIVE TEXT INSERTION</p><h1>Assisted Input</h1><p className="subtitle">Prepare your text here, then send it into a writing field on another webpage.</p></div><span className="privacy-pill">Private by default</span></div>
         <div className="workspace-grid">
@@ -137,11 +137,11 @@ export default function App() {
         <div className="destination-note"><span className="destination-icon">⌁</span><div><strong>Writing in another app?</strong><span>Install the bookmarklet connector to insert text progressively into supported fields on the page you are using.</span></div><button className="link-button" onClick={() => setTab("connect")}>Set up connector →</button></div>
       </section>}
       {tab === "connect" && <section className="content narrow-content">
-        <div className="page-heading"><div><p className="eyebrow">BROWSER CONNECTOR</p><h1>Connect AccessDraft to your browser</h1><p className="subtitle">Add a bookmarklet to Chrome. Launch it on the webpage where you want to type.</p></div></div>
+        <div className="page-heading"><div><p className="eyebrow">BROWSER CONNECTOR</p><h1>Connect TypeFlow to your browser</h1><p className="subtitle">Add a bookmarklet to Chrome. Launch it on the webpage where you want to type.</p></div></div>
         <section className="panel connect-panel">
-          <div className="step-number">01</div><h2>Copy your connector bookmarklet</h2><p>Copy the code, create a new Chrome bookmark, name it “AccessDraft”, then paste the code into the bookmark URL field.</p><button className="primary-button" onClick={copyBookmarklet}>Copy bookmarklet</button>
+          <div className="step-number">01</div><h2>Copy your connector bookmarklet</h2><p>Copy the code, create a new Chrome bookmark, name it “TypeFlow”, then paste the code into the bookmark URL field.</p><button className="primary-button" onClick={copyBookmarklet}>Copy bookmarklet</button>
           <label className="field-label" htmlFor="bookmarklet-code">Bookmarklet code</label><textarea id="bookmarklet-code" className="code-area" readOnly value={bookmarklet} onFocus={e => e.currentTarget.select()} />
-          <div className="step-divider" /><div className="step-number">02</div><h2>Google Docs setup</h2><p>Google Docs needs the AccessDraft Chrome extension. In the repository, open the extension folder. In Chrome, visit chrome://extensions, enable Developer mode, click Load unpacked, and select that extension folder. Reload your Google Docs tab. The Google Docs toolbar should appear automatically.</p>
+          <div className="step-divider" /><div className="step-number">02</div><h2>Google Docs setup</h2><p>Google Docs needs the TypeFlow Chrome extension. In the repository, open the extension folder. In Chrome, visit chrome://extensions, enable Developer mode, click Load unpacked, and select that extension folder. Reload your Google Docs tab. The Google Docs toolbar should appear automatically.</p>
           <div className="step-divider" /><div className="step-number">03</div><h2>Use the right connector</h2><p>In Google Docs, paste or type text into the extension toolbar, click your intended insertion point in the document, then begin. For other supported websites, use the bookmarklet above and select a writing field.</p>
           <div className="compatibility"><strong>Compatibility details</strong><p>The Google Docs extension uses Chrome’s debugger permission to send actual text input through Chrome’s DevTools Protocol. Chrome displays a debugging notification while it is active. Standard HTML inputs, textareas, and many contenteditable fields continue to use the bookmarklet.</p></div>
         </section>
@@ -166,7 +166,7 @@ export default function App() {
           <button className="danger-button" onClick={async()=>{await saveSettings(defaults);setPrefs(defaults);setMessage("Local preferences reset.");}}>Reset local settings</button>
         </section>
       </section>}
-      <footer className="app-footer"><span>AccessDraft</span><span>Progressive text insertion · Local-first</span></footer>
+      <footer className="app-footer"><span>TypeFlow</span><span>Progressive text insertion · Local-first</span></footer>
     </main>
   </div>;
 }
