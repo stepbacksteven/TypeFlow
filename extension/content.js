@@ -3,7 +3,7 @@
 
   const host = document.createElement("div");
   host.id = "typeflow-docs-extension";
-  host.style.cssText = "all:initial;position:fixed;right:18px;top:90px;z-index:2147483647";
+  host.style.cssText = "all:initial;position:fixed;right:18px;top:160px;z-index:2147483647";
   const shadow = host.attachShadow({ mode: "open" });
   shadow.innerHTML = `
     <style>
