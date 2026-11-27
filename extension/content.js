@@ -60,7 +60,7 @@
     <section id="panel">
       <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
-      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="0.1" value="50" aria-label="Target words per minute"></div>
+      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="0.01" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
         <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
@@ -84,11 +84,83 @@
         <div id="state" role="status">Click in the doc, then Begin</div>
         <div class="version" id="version"></div>
       </div>
-    </section>
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.22";
+  const VERSION = "1.23";
+
+  /* variation-engine:start */
+  // Speed variation is a biased random walk around the chosen speed (the "original WPM").
+  //  - Speed never leaves [original - Min, original + Max] (and always stays within 5-120 WPM).
+  //  - Larger Max makes upward legs more likely, longer and faster. Larger Min does the same downward.
+  //  - Pity system: if the speed spends too much time near one extreme, it is walked back to the
+  //    original WPM, and only then does random movement resume.
+  //  - Speeds are kept to two decimals so the slider and the pacing share one value.
+  const createVariationEngine = (random = Math.random) => {
+    const ZONE = 0.6;                     // "near an extreme" = the outer 40% of that side's range
+    const DECAY = 0.25;                   // pity pressure drained per character spent away from an extreme
+    const PITY_MIN = 60, PITY_MAX = 120;  // pressure needed before the pity return (re-rolled each time)
+    const round2 = n => Math.round(n * 100) / 100;
+    let dest = null, pressure = 0, pityLimit = 0, returning = false, firstLeg = true;
+
+    // restart(): new run or new target speed. retarget(): same run, but the limits changed.
+    const retarget = () => { dest = null; pressure = 0; pityLimit = 0; returning = false; };
+    const restart = () => { retarget(); firstLeg = true; };
+
+    const pickDestination = (active, target, lower, upper) => {
+      const down = target - lower, up = upper - target;
+      const minMove = Math.min(1, (up + down) * 0.15);
+      const lean = Math.abs(up - down) / (up + down);   // 0 = balanced, toward 1 = one-sided
+      // The side is chosen once, in proportion to its size, so the start direction follows Min and Max too.
+      const goUp = up > 0 && (down <= 0 || random() < up / (up + down));
+      const side = goUp ? up : down;
+      const favoured = goUp === (up >= down);
+      let pick = target;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        // Favoured side: excursions lean toward its far end. Weaker side: shorter excursions.
+        let fraction = Math.pow(random(), favoured ? 1 / (1 + lean) : 1 + lean);
+        if (firstLeg) fraction = Math.max(fraction, 0.3);   // the first move should be a visible one
+        pick = goUp ? target + side * fraction : target - side * fraction;
+        if (Math.abs(pick - active) >= minMove) break;       // redraw the distance, not the side
+      }
+      return Math.min(upper, Math.max(lower, pick));
+    };
+
+    const tick = (active, target, min, max) => {
+      const lower = Math.max(5, target - min), upper = Math.min(120, target + max);
+      const down = target - lower, up = upper - target;
+      active = Math.min(upper, Math.max(lower, active));
+      if (up + down <= 0) { restart(); return round2(target); }
+
+      if (!returning) {
+        const nearExtreme = (up > 0 && active >= target + up * ZONE) || (down > 0 && active <= target - down * ZONE);
+        // Time near an extreme builds pressure; time away only drains it slowly, so brief dips
+        // back toward the middle don't let a long stay near an extreme go unnoticed.
+        if (pityLimit === 0) pityLimit = PITY_MIN + Math.floor(random() * (PITY_MAX - PITY_MIN + 1));
+        pressure = nearExtreme ? pressure + 1 : Math.max(0, pressure - DECAY);
+        if (pressure >= pityLimit) { returning = true; pressure = 0; pityLimit = 0; }
+      }
+      if (returning) dest = target;
+      else if (dest === null || Math.abs(dest - active) < 0.005) {
+        dest = pickDestination(active, target, lower, upper);
+        firstLeg = false;
+      }
+      dest = Math.min(upper, Math.max(lower, dest));
+
+      const distance = dest - active;
+      // Larger settings move faster. The pity return uses the larger side's pace so it never crawls.
+      const rate = returning ? Math.max(min, max) : (distance < 0 ? min : max);
+      const step = Math.max(0.02, round2(rate * 0.02));
+      active = Math.abs(distance) <= step ? dest : active + Math.sign(distance) * step;
+      active = round2(Math.min(upper, Math.max(lower, active)));
+      if (returning && Math.abs(active - target) < 0.005) { returning = false; dest = null; pressure = 0; }
+      return active;
+    };
+
+    return { tick, restart, retarget };
+  };
+  /* variation-engine:end */
+
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -102,9 +174,7 @@
   let wordsSincePause = 0;
   let targetWpm = Number($("speed").value);
   let activeWpm = targetWpm;
-  let variationTargetWpm = targetWpm;
-  let driftCounter = 0;
-  let variationDirection = Math.random() < 0.5 ? -1 : 1;
+  const variation = createVariationEngine();
   let variationMin = 2;
   let variationMax = 20;
   let settingsReady = false;
@@ -112,7 +182,8 @@
   const saveSettings = () => {
     if (!settingsReady || !chrome.storage?.local) return;
     const settings = {};
-    for (const id of settingIds) settings[id] = $(id).type === "checkbox" ? $(id).checked : $(id).value;
+    // Save the chosen speed, never the slider position: while running, the slider shows the drifting speed.
+    for (const id of settingIds) settings[id] = id === "speed" ? targetWpm : $(id).type === "checkbox" ? $(id).checked : $(id).value;
     chrome.storage.local.set({ typeflowSettings: settings });
   };
 
@@ -154,44 +225,23 @@
   makeDraggable($("panel").querySelector("header"));
 
   const renderSpeed = () => {
-    // Keep the slider's internal position fractional for smooth movement.
+    // The slider shows the exact (two-decimal) speed used for pacing, so the two never drift apart.
     $("speed").value = String(Math.max(5, Math.min(120, activeWpm)));
     // Show whole WPM values to the user.
     $("speedval").textContent = String(Math.round(activeWpm));
   };
 
-  // Keep variation inside the original speed's independent lower and upper limits.
-  // Larger settings create a wider range and faster movement on their own side.
   const updateVariableSpeed = () => {
-    if (!$("variable").checked) {
-      activeWpm = targetWpm;
-      variationTargetWpm = targetWpm;
-      renderSpeed();
-      return;
-    }
+    activeWpm = $("variable").checked ? variation.tick(activeWpm, targetWpm, variationMin, variationMax) : targetWpm;
+    renderSpeed();
+  };
 
+  // Pull the current speed inside new Min/Max limits right away (used when they change while paused).
+  const clampActiveToLimits = () => {
+    if (!$("variable").checked) return;
     const lower = Math.max(5, targetWpm - variationMin);
     const upper = Math.min(120, targetWpm + variationMax);
-    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
-    if (variationTargetWpm < lower || variationTargetWpm > upper) variationTargetWpm = activeWpm;
-
-    if (Math.abs(variationTargetWpm - activeWpm) < 0.001) {
-      // Pick either side in proportion to its setting, then choose any destination
-      // within that side's range. This avoids bouncing only between the endpoints.
-      const totalVariation = variationMin + variationMax;
-      const goLower = Math.random() * totalVariation < variationMin;
-      const offset = Math.random() * (goLower ? variationMin : variationMax);
-      variationTargetWpm = goLower
-        ? Math.max(lower, targetWpm - offset)
-        : Math.min(upper, targetWpm + offset);
-    }
-
-    const distanceToTarget = variationTargetWpm - activeWpm;
-    const sideSetting = distanceToTarget < 0 ? variationMin : variationMax;
-    // Quantize movement to the slider's 0.1 WPM precision.
-    const stepSize = Math.max(0.1, Math.round(sideSetting * 0.02 * 10) / 10);
-    activeWpm += Math.sign(distanceToTarget) * Math.min(stepSize, Math.abs(distanceToTarget));
-    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
+    activeWpm = Math.round(Math.max(lower, Math.min(upper, activeWpm)) * 100) / 100;
     renderSpeed();
   };
   // Number fields accept digits only; the seconds fields also accept one "." and at most two decimals.
@@ -303,7 +353,7 @@
     paused = false;
     clearTimeout(timer);
     timer = null;
-    if (resetPosition) { sourceIndex = 0; wordsSincePause = 0; activeWpm = targetWpm; variationTargetWpm = targetWpm; driftCounter = 0; renderSpeed(); }
+    if (resetPosition) { sourceIndex = 0; wordsSincePause = 0; activeWpm = targetWpm; variation.restart(); renderSpeed(); }
     state(message);
     syncControls();
     if (attached) {
@@ -344,18 +394,29 @@
     }
   };
 
-  $("speed").addEventListener("input", () => {
-    targetWpm = Math.round(Number($("speed").value));
+  // The chosen speed is always a whole number. The slider itself moves in 0.01 steps so the
+  // drifting speed looks smooth, so keyboard steps are handled here instead of by the browser.
+  const setTargetWpm = value => {
+    targetWpm = Math.max(5, Math.min(120, Math.round(Number(value) || 50)));
     $("speed").value = String(targetWpm);
     activeWpm = targetWpm;
-    driftCounter = 0;
-    variationTargetWpm = targetWpm;
+    variation.restart();
     renderSpeed();
     saveSettings();
+  };
+  $("speed").addEventListener("input", () => setTargetWpm($("speed").value));
+  $("speed").addEventListener("keydown", event => {
+    const steps = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1, PageDown: -10, PageUp: 10 };
+    let next;
+    if (event.key in steps) next = Math.round(activeWpm) + steps[event.key];
+    else if (event.key === "Home") next = 5;
+    else if (event.key === "End") next = 120;
+    else return;
+    event.preventDefault();
+    setTargetWpm(next);
   });
   $("variable").addEventListener("change", () => {
-    driftCounter = 0;
-    variationTargetWpm = targetWpm;
+    variation.restart();
     if (!$("variable").checked) activeWpm = targetWpm;
     $("variationOptions").hidden = !$("variable").checked;
     renderSpeed();
@@ -367,9 +428,13 @@
     const maxInput = $("variationMax");
     if (minInput.value === "" || maxInput.value === "") return;
     // Keep the two controls independent. Normalize their values only for calculations.
-    variationMin = Math.max(1, Math.min(99, Number(minInput.value)));
-    variationMax = Math.max(1, Math.min(99, Number(maxInput.value)));
-    variationTargetWpm = activeWpm;
+    const nextMin = Math.max(1, Math.min(99, Number(minInput.value)));
+    const nextMax = Math.max(1, Math.min(99, Number(maxInput.value)));
+    if (nextMin === variationMin && nextMax === variationMax) return;   // nothing changed: keep the walk going
+    variationMin = nextMin;
+    variationMax = nextMax;
+    variation.retarget();
+    clampActiveToLimits();
     saveSettings();
   };
   const commitVariationInput = id => {
@@ -386,11 +451,18 @@
   $("variationMax").addEventListener("change", () => commitVariationInput("variationMax"));
   $("variationMin").addEventListener("blur", () => commitVariationInput("variationMin"));
   $("variationMax").addEventListener("blur", () => commitVariationInput("variationMax"));
+  // Buttons keep the caret in Docs, so clicking them never blurs a box being edited.
+  // Commit every number field explicitly before starting or resuming.
+  const commitSettings = () => {
+    commitAllNumbers();
+    commitVariationInput("variationMin");
+    commitVariationInput("variationMax");
+  };
   $("start").addEventListener("click", async () => {
     const source = $("text").value;
     if (!source) return state("Add text first");
     if (running) return;
-    commitAllNumbers();
+    commitSettings();
     activeEditor = findEditor();
     if (!activeEditor) return state("Docs editor not found. Reload the tab.");
     try {
@@ -401,9 +473,7 @@
       running = true;
       paused = false;
       activeWpm = targetWpm;
-      variationTargetWpm = targetWpm;
-      driftCounter = 0;
-      variationDirection = Math.random() < 0.5 ? -1 : 1;
+      variation.restart();
       if (sourceIndex >= source.length) sourceIndex = 0;
       if (sourceIndex === 0) wordsSincePause = 0;
       renderSpeed();
@@ -427,6 +497,7 @@
   $("resume").addEventListener("click", () => {
     if (!running || !paused) return;
     try {
+      commitSettings();
       focusDocumentEditor();
       paused = false;
       syncControls();
@@ -457,9 +528,10 @@
     variationMax = Math.max(1, Math.min(99, Number($("variationMax").value) || 20));
     $("variationMin").value = String(variationMin);
     $("variationMax").value = String(variationMax);
-    targetWpm = Number($("speed").value);
+    targetWpm = Math.max(5, Math.min(120, Math.round(Number($("speed").value) || 50)));
+    $("speed").value = String(targetWpm);
     activeWpm = targetWpm;
-    variationTargetWpm = targetWpm;
+    variation.restart();
     $("variationOptions").hidden = !$("variable").checked;
     renderSpeed();
     syncControls();
