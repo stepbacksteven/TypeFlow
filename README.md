@@ -1,5 +1,5 @@
 # TypeFlow
-> Version history 1.13
+> Version history 1.14
 
 ## Important
 
@@ -53,7 +53,7 @@ The Google Docs extension is the main way to use TypeFlow with Google Docs. It a
 5. Choose your insertion speed and pacing settings.
 6. Start insertion.
 7. Use Pause and Resume to control the insertion.
-8. Use Reset to end the run and return to the beginning. Close the toolbar with × and reopen it using the TypeFlow icon.
+8. Use Reset to end the run and return to the beginning.
 
 The extension uses Chrome's debugger permission to send text input to the focused Google Docs document. Chrome may display a debugging notification while the extension is active. Keep the Google Docs tab open during insertion.
 
