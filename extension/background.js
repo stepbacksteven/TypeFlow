@@ -9,7 +9,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   (async () => {
     const target = { tabId };
-    if (message.type === "ACCESSDRAFT_ATTACH") {
+    if (message.type === "TYPEFLOW_ATTACH") {
       if (!attachedTabs.has(tabId)) {
         try {
           await chrome.debugger.attach(target, "1.3");
@@ -24,13 +24,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return { ok: true };
     }
 
-    if (message.type === "ACCESSDRAFT_INSERT") {
+    if (message.type === "TYPEFLOW_INSERT") {
       if (!attachedTabs.has(tabId)) throw new Error("Start insertion again to reconnect to Google Docs.");
       await chrome.debugger.sendCommand(target, "Input.insertText", { text: message.text });
       return { ok: true };
     }
 
-    if (message.type === "ACCESSDRAFT_DETACH") {
+    if (message.type === "TYPEFLOW_DETACH") {
       if (attachedTabs.has(tabId)) {
         await chrome.debugger.detach(target);
         attachedTabs.delete(tabId);
@@ -38,7 +38,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return { ok: true };
     }
 
-    throw new Error("Unknown AccessDraft command.");
+    throw new Error("Unknown TypeFlow command.");
   })().then(sendResponse).catch(error => sendResponse({ ok: false, error: String(error?.message || error) }));
 
   return true;
