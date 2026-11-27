@@ -9,7 +9,6 @@
 >
 > The Google Docs extension still needs live testing. Compatibility may vary by Chrome version, device, and browser policy. Test it before relying on it for important work.
 >
-> AccessDraft does not create fake typing mistakes, fake corrections, or randomized typing patterns.
 
 ## Google Docs Extension
 
