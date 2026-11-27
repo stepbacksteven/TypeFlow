@@ -124,7 +124,8 @@
   };
   makeDraggable($("panel").querySelector("header"));
   makeDraggable($("reopen"));
-\n  const renderSpeed = () => {
+
+  const renderSpeed = () => {
     const shown = Math.round(activeWpm);
     $("speed").value = String(shown);
     $("speedval").textContent = String(shown);
