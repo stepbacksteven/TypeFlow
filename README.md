@@ -1,4 +1,4 @@
-# AccessDraft 
+# TypeFlow 
 > Version history 1.06
 
 ## Important
@@ -15,17 +15,17 @@
 
 ## Google Docs Extension
 
-The Google Docs extension is the main way to use AccessDraft with Google Docs. It adds a floating toolbar directly to Google Docs and progressively inserts the text you provide.
+The Google Docs extension is the main way to use TypeFlow with Google Docs. It adds a floating toolbar directly to Google Docs and progressively inserts the text you provide.
 
 ### What You Need
 
 - Google Chrome.
-- The AccessDraft project files.
+- The TypeFlow project files.
 - Permission to install unpacked Chrome extensions.
 
-### 1. Download AccessDraft
+### 1. Download TypeFlow
 
-1. Open the [AccessDraft GitHub repository](https://github.com/stepbacksteven/accessdraft).
+1. Open the [TypeFlow GitHub repository](https://github.com/stepbacksteven/TypeFlow).
 2. Click the green **Code** button.
 3. Select **Download ZIP**.
 4. Extract the ZIP file on your device.
@@ -35,19 +35,19 @@ The Google Docs extension is the main way to use AccessDraft with Google Docs. I
 1. Open `chrome://extensions` in Chrome.
 2. Turn on **Developer mode**.
 3. Click **Load unpacked**.
-4. Open the extracted AccessDraft folder.
+4. Open the extracted TypeFlow folder.
 5. Select the folder named `extension`.
-6. The AccessDraft extension should now appear in your extensions list.
+6. The TypeFlow extension should now appear in your extensions list.
 
 > [!WARNING]
 > **Extension installation may be blocked on managed devices.**
 >
-> If Chrome displays "Extension installation is blocked by policy", your browser or device administrator controls extension installation. You will need the administrator to approve AccessDraft. Do not attempt to bypass your organization's device restrictions.
+> If Chrome displays "Extension installation is blocked by policy", your browser or device administrator controls extension installation. You will need the administrator to approve TypeFlow. Do not attempt to bypass your organization's device restrictions.
 
-### 3. Use AccessDraft in Google Docs
+### 3. Use TypeFlow in Google Docs
 
 1. Open or reload a Google Docs document.
-2. Look for the AccessDraft toolbar near the bottom-right of the page.
+2. Look for the TypeFlow toolbar near the bottom-right of the page.
 3. Enter or paste your text into the toolbar.
 4. Click the position in the document where you want the text inserted.
 5. Choose your insertion speed and pacing settings.
@@ -59,12 +59,12 @@ The extension uses Chrome's debugger permission to send text input to the focuse
 
 ### 4. Update the Extension
 
-1. Download and extract the latest AccessDraft project files.
+1. Download and extract the latest TypeFlow project files.
 2. Open `chrome://extensions`.
-3. Find AccessDraft and click **Reload**. If you replaced the project folder, load the updated `extension` folder instead.
+3. Find TypeFlow and click **Reload**. If you replaced the project folder, load the updated `extension` folder instead.
 4. Reload your Google Docs tab.
 
-## Run AccessDraft Locally
+## Run TypeFlow Locally
 
 ### Requirements
 
@@ -96,4 +96,4 @@ npm run dev -- --host 0.0.0.0
 
 ## Feedback and Issues
 
-If you find a bug or have a feature request, open an issue in the [AccessDraft GitHub repository](https://github.com/stepbacksteven/accessdraft). Include your browser, the steps to reproduce the problem, and any error message. Do not include private documents or personal information.
+If you find a bug or have a feature request, open an issue in the [TypeFlow GitHub repository](https://github.com/stepbacksteven/TypeFlow). Include your browser, the steps to reproduce the problem, and any error message. Do not include private documents or personal information.
