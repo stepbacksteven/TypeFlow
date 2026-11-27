@@ -1,64 +1,172 @@
 # AccessDraft
 
-AccessDraft is an installable, local-first Progressive Web App for preparing text and progressively inserting it into supported writing fields on other webpages.
+> A browser-based text insertion tool designed to make writing more accessible.
+>
+> AccessDraft lets you prepare text, choose an insertion speed, and send it progressively into supported writing fields.
 
-## Run locally
+## Important
+
+> [!CAUTION]
+> **Google Docs support is experimental.**
+>
+> The Google Docs extension has not yet been fully tested in a live document. Its behaviour may vary by Chrome version, device, and browser policy. Do not rely on it for important work until you have tested it yourself.
+>
+> AccessDraft does not create fake typing mistakes, fake corrections, or randomized human typing patterns. It provides user-controlled text insertion and pacing.
+
+## Available Methods
+
+- [Standard Websites](#standard-website-connector)  
+  Use the AccessDraft bookmarklet on supported text fields and editors.
+- [Google Docs](#google-docs-extension)  
+  Use the separate Chrome extension for progressive insertion in Google Docs.
+- [Run AccessDraft Locally](#run-accessdraft-locally)  
+  Run the web app from the project repository.
+
+## What AccessDraft Does
+
+- Lets you type or paste text into Assisted Input.
+- Preserves your original wording, punctuation, capitalization, and paragraph breaks.
+- Inserts text progressively at an adjustable pace.
+- Offers character and word insertion modes where supported.
+- Provides pause, resume, stop, and reset controls.
+- Includes variable pacing and optional punctuation pauses.
+- Shows word and character counts.
+- Offers optional browser speech recognition where supported.
+
+## 1. Standard Website Connector
+
+The bookmarklet works with standard text inputs, textareas, and many contenteditable fields.
+
+### Setup
+
+1. Open AccessDraft in your browser.
+2. Go to the Connect section.
+3. Copy the AccessDraft bookmarklet.
+4. Create a new Chrome bookmark.
+5. Name it **AccessDraft**.
+6. Paste the copied bookmarklet code into the bookmark's URL field.
+7. Save the bookmark.
+
+### Using the Connector
+
+1. Open a website with a supported writing field.
+2. Click the AccessDraft bookmark.
+3. The floating AccessDraft toolbar should appear.
+4. Enter or paste your text into the toolbar.
+5. Click the intended insertion point in the webpage.
+6. Choose your speed and pacing settings.
+7. Start insertion. Use Pause, Resume, or Stop and reset as needed.
+
+**Compatibility:** Some websites use custom editors that reject scripted input. Results can vary between websites. Always test the connector on the target website first.
+
+## 2. Google Docs Extension
+
+> [!WARNING]
+> The bookmarklet does not provide direct Google Docs insertion. Use the separate extension for Google Docs.
+>
+> The extension requires Chrome's debugger permission. Chrome may display a notification while the extension controls text insertion. The extension cannot be installed if your device or browser administrator blocks it. Ask the administrator to approve it. AccessDraft does not provide a method to bypass managed-device restrictions.
+
+### What You Need
+
+- Google Chrome.
+- The AccessDraft project files.
+- Permission to install unpacked extensions in Chrome.
+
+### Installing the Extension
+
+1. Open the AccessDraft repository and download the project files.
+2. Extract the downloaded ZIP file.
+3. Open `chrome://extensions` in Chrome.
+4. Turn on **Developer mode**, if Chrome allows it.
+5. Select **Load unpacked**.
+6. Choose the `extension` folder inside the extracted AccessDraft project.
+7. Open or reload a Google Docs document.
+8. The AccessDraft toolbar should appear near the bottom-right of the page.
+
+If Chrome displays **Extension installation is blocked by policy**, the browser or device is managed by an administrator. You will need the administrator to allow the extension.
+
+### Using the Google Docs Extension
+
+1. Open your Google Docs document.
+2. Enter or paste your text into the AccessDraft toolbar.
+3. Click the exact position in the document where insertion should begin.
+4. Set your words-per-minute speed and pacing options.
+5. Select **Start**.
+6. Use **Pause** to temporarily stop insertion.
+7. Use **Resume** to continue from the same position.
+8. Use **Stop and reset** to end the run and return to the beginning.
+
+The extension uses Chrome's debugger permission and the Chrome DevTools Protocol to send text input to the focused document. Keep the Google Docs tab open while inserting text.
+
+### Updating the Extension
+
+1. Get the latest project files.
+2. Open `chrome://extensions`.
+3. Find AccessDraft and select **Reload**.
+4. Reload your Google Docs tab.
+
+## 3. Run AccessDraft Locally
+
+### Requirements
+
+- Node.js and npm.
+- A browser such as Google Chrome.
+
+### Start the App
+
+Open a terminal in the project folder and run:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local Vite URL in Chrome. Build with `npm run build`.
+Open the local URL shown in the terminal.
 
-## Main workflow
+To create a production build:
 
-1. Enter or paste text in Assisted Input.
-2. For standard websites, use the AccessDraft bookmarklet.
-3. For Google Docs, install the Chrome extension in the `extension` folder. Do not use the bookmarklet on Google Docs.
-4. Paste or type the text into the connector toolbar, click the intended position in the document, and begin insertion.
-5. Set your pace and use pause, resume, or stop as needed.
+```bash
+npm run build
+```
 
-## Google Docs extension installation
+If you are using GitHub Codespaces, start the development server with:
 
-1. In the Codespaces terminal, run `git pull` to get the latest changes.
-2. Run `npm install` and `npm run dev -- --host 0.0.0.0` to start the AccessDraft web app.
-3. In the Codespaces file explorer, open the `extension` folder and confirm it contains `manifest.json`, `background.js`, and `content.js`.
-4. In Chrome, open `chrome://extensions`.
-5. Turn on Developer mode.
-6. Click Load unpacked and select the repository's `extension` folder.
-7. Open or reload a Google Docs document. The AccessDraft Google Docs toolbar should appear at the bottom-right.
-8. Paste or type your text into that toolbar. Click the desired insertion point in the document, then use Begin insertion.
+```bash
+npm run dev -- --host 0.0.0.0
+```
 
-Chrome will show a debugging notification while AccessDraft controls text insertion. The extension requests the debugger permission because it uses Chrome's DevTools Protocol to send actual text input to the focused document. Do not use Chrome DevTools debugging on the same tab at the same time.
+## Pacing and Controls
 
-To update the extension after pulling new code, return to `chrome://extensions` and click the extension's Reload button. Reload the Google Docs tab too.
+- **WPM:** Choose a speed from 5 to 120 words per minute.
+- **Variable pacing:** Adjusts the delay around your selected speed.
+- **Punctuation pauses:** Adds short pauses after punctuation.
+- **Pause:** Holds the current insertion position.
+- **Resume:** Continues from where you paused.
+- **Stop and reset:** Ends insertion and returns to the beginning.
+- **Automatic reset:** Completed text is ready to insert again.
 
-## Pacing and controls
+The Google Docs extension locks its text and pacing settings while insertion is running or paused. Stop and reset before changing those settings. This helps prevent focus from moving into the toolbar while text is being inserted.
 
-- The text box and pacing controls are locked for the whole Google Docs run, including while paused, so text can never land in the toolbar. Use Stop and reset to change them.
-- Pause preserves the current position so you can resume.
-- Stop and reset ends the run and returns the source position to the beginning. It is a single button in the extension, the bookmarklet and the web app preview.
-- Completing an insertion resets the source position automatically.
-- Variable pacing adjusts the interval around the selected speed. Punctuation adds short extra pauses. These are pacing controls, not simulated typing errors.
-
-## Standard website connector
-
-The bookmarklet supports standard text inputs, textareas, and many contenteditable fields. Compatibility varies by site and editor. Some editors require their own integration and may reject synthetic input events.
+Pause settings can add a fixed delay after a chosen number of words or after each sentence. A value of 0 disables that pause. These settings are controlled by you. AccessDraft does not add random delays to imitate a person.
 
 ## Privacy
 
-No account is required. Prepared assignment text is kept in the current page state and is not saved to IndexedDB. Only preferences are stored locally in IndexedDB. Speech recognition uses the browser's speech recognition provider where available and may involve external processing. Microphone access starts only when requested.
+- No account is required.
+- Your prepared text stays in the current page state and is not saved to IndexedDB.
+- AccessDraft stores preferences locally in IndexedDB.
+- Speech recognition uses your browser's speech recognition provider where available. That provider may process audio externally.
+- Microphone access starts only when you choose to use speech recognition.
 
-## PWA
+## Current Limitations
 
-The Vite PWA plugin generates the web manifest and service worker during production builds. The app shell and static assets are precached for offline access. External webpage insertion, clipboard access, and browser speech recognition depend on browser permissions and page compatibility.
+- The main app's progress preview is a pacing preview. It does not confirm that another website accepted the text.
+- The standard bookmarklet reports characters sent, but a website may reject or change the input.
+- Website compatibility varies, especially with custom rich-text editors.
+- Google Docs direct insertion is experimental and requires the extension to be installed and enabled.
+- The Google Docs extension's focus handling and pacing need live testing.
+- Browser speech recognition depends on browser support and permissions.
+- External webpage insertion, clipboard access, and speech recognition may depend on browser permissions.
 
-## Current implementation limits
+## Feedback and Issues
 
-- The progress preview in the main app is a pacing preview. It does not represent text accepted by an external page.
-- The standard bookmarklet reports characters sent and dispatches input events. A webpage may still reject or transform them.
-- The Google Docs extension uses Chrome's debugger permission and sends text through the DevTools Protocol. It requires Chrome, the extension to be enabled, and the document tab to remain open and focused.
-- The extension's Google Docs focus and pacing fixes need live testing after reload.
-- Pauses are fixed and set by you, not random. In the Google Docs toolbar you can pause for an exact number of seconds (digits and one decimal point, up to two decimal places, for example 1.05) after every N words and after each sentence. Setting a value to 0 turns that pause off. There is no paragraph pause.
-- Test the connector on each target website before relying on it for important work.
+If you find a bug or have a feature request, open an issue in the AccessDraft GitHub repository. Include the browser, website, steps to reproduce the problem, and any error message. Do not include private documents or personal information.
