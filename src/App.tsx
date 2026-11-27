@@ -98,7 +98,7 @@ export default function App() {
 
   return <div className={`app-shell ${prefs.dark ? "dark" : ""} ${prefs.highContrast ? "contrast" : ""} ${prefs.largeButtons ? "large-controls" : ""} ${prefs.clutterFree ? "clutter-free" : ""} ${prefs.dyslexia ? "dyslexia" : ""}`} style={{ "--input-size": prefs.fontSize + "px" } as CSSProperties}>
     <aside className="sidebar">
-      <div className="brand"><span className="brand-mark">A</span><span>TypeFlow</span></div>
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" style={{width:24,height:24}}><path d="M15 18h34M32 18v31" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#77A99A" strokeWidth="6" strokeLinecap="round"/><circle cx="50" cy="22" r="4" fill="#77A99A"/></svg></span><span>TypeFlow</span></div>
       <p className="side-label">ACCESSIBILITY TOOL</p>
       <button className={tab === "input" ? "nav-item selected" : "nav-item"} onClick={() => setTab("input")}> <span>▤</span> Assisted Input</button>
       <button className={tab === "connect" ? "nav-item selected" : "nav-item"} onClick={() => setTab("connect")}><span>⌁</span> Browser connection</button>
