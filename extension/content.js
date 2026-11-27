@@ -60,7 +60,7 @@
     <section id="panel">
       <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
-      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="1" value="50" aria-label="Target words per minute"></div>
+      <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="0.1" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
         <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
@@ -88,7 +88,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.20";
+  const VERSION = "1.21";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -102,6 +102,7 @@
   let wordsSincePause = 0;
   let targetWpm = Number($("speed").value);
   let activeWpm = targetWpm;
+  let variationTargetWpm = targetWpm;
   let driftCounter = 0;
   let variationDirection = Math.random() < 0.5 ? -1 : 1;
   let variationMin = 2;
@@ -153,36 +154,42 @@
   makeDraggable($("panel").querySelector("header"));
 
   const renderSpeed = () => {
-    $("speed").value = String(Math.max(5, Math.min(120, Math.round(activeWpm))));
+    // Keep the slider's internal position fractional for smooth movement.
+    $("speed").value = String(Math.max(5, Math.min(120, activeWpm)));
+    // Show whole WPM values to the user.
     $("speedval").textContent = String(Math.round(activeWpm));
   };
 
-  // Move gradually toward a changing speed target. Larger variation settings increase
-  // the step size, while speed still transitions through intermediate values.
+  // Choose a new destination only after reaching the previous one.
+  // Move by fractional WPM increments so the slider glides while the label
+  // advances one whole WPM at a time.
   const updateVariableSpeed = () => {
     if (!$("variable").checked) {
       activeWpm = targetWpm;
+      variationTargetWpm = targetWpm;
       renderSpeed();
       return;
     }
-    driftCounter += 1;
-    if (driftCounter % 3 !== 0) return;
-    const lower = Math.max(5, targetWpm - variationMax);
-    const upper = Math.min(120, targetWpm + variationMax);
-    const distance = activeWpm - targetWpm;
-    const direction = distance === 0
-      ? (Math.random() < 0.5 ? -1 : 1)
-      : (Math.random() < 0.28 ? -Math.sign(distance) : (Math.random() < 0.5 ? -1 : 1));
-    const offsetMin = Math.min(variationMin, variationMax);
-    const offsetMax = Math.max(variationMin, variationMax);
-    const offset = offsetMin + Math.floor(Math.random() * (offsetMax - offsetMin + 1));
-    const destination = Math.max(lower, Math.min(upper, targetWpm + direction * offset));
-    const stepSize = Math.min(Math.max(1, Math.ceil(offset / 8)), Math.abs(destination - activeWpm));
-    activeWpm += Math.sign(destination - activeWpm) * stepSize;
-    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
+
+    if (Math.abs(variationTargetWpm - activeWpm) < 0.001) {
+      const lower = Math.max(5, targetWpm - variationMax);
+      const upper = Math.min(120, targetWpm + variationMax);
+      const distance = activeWpm - targetWpm;
+      const direction = distance === 0
+        ? (Math.random() < 0.5 ? -1 : 1)
+        : (Math.random() < 0.28 ? -Math.sign(distance) : (Math.random() < 0.5 ? -1 : 1));
+      const offsetMin = Math.min(variationMin, variationMax);
+      const offsetMax = Math.max(variationMin, variationMax);
+      const offset = offsetMin + Math.floor(Math.random() * (offsetMax - offsetMin + 1));
+      variationTargetWpm = Math.max(lower, Math.min(upper, targetWpm + direction * offset));
+    }
+
+    const distanceToTarget = variationTargetWpm - activeWpm;
+    const stepSize = Math.min(0.1, Math.abs(distanceToTarget));
+    activeWpm += Math.sign(distanceToTarget) * stepSize;
+    activeWpm = Math.max(5, Math.min(120, activeWpm));
     renderSpeed();
   };
-
   // Number fields accept digits only; the seconds fields also accept one "." and at most two decimals.
   const cleanNumber = (el, decimals) => {
     let value = el.value.replace(decimals ? /[^0-9.]/g : /[^0-9]/g, "");
@@ -292,7 +299,7 @@
     paused = false;
     clearTimeout(timer);
     timer = null;
-    if (resetPosition) { sourceIndex = 0; wordsSincePause = 0; activeWpm = targetWpm; driftCounter = 0; renderSpeed(); }
+    if (resetPosition) { sourceIndex = 0; wordsSincePause = 0; activeWpm = targetWpm; variationTargetWpm = targetWpm; driftCounter = 0; renderSpeed(); }
     state(message);
     syncControls();
     if (attached) {
@@ -338,11 +345,13 @@
     $("speed").value = String(targetWpm);
     activeWpm = targetWpm;
     driftCounter = 0;
+    variationTargetWpm = targetWpm;
     renderSpeed();
     saveSettings();
   });
   $("variable").addEventListener("change", () => {
     driftCounter = 0;
+    variationTargetWpm = targetWpm;
     if (!$("variable").checked) activeWpm = targetWpm;
     $("variationOptions").hidden = !$("variable").checked;
     renderSpeed();
@@ -387,6 +396,7 @@
       running = true;
       paused = false;
       activeWpm = targetWpm;
+      variationTargetWpm = targetWpm;
       driftCounter = 0;
       variationDirection = Math.random() < 0.5 ? -1 : 1;
       if (sourceIndex >= source.length) sourceIndex = 0;
@@ -444,6 +454,7 @@
     $("variationMax").value = String(variationMax);
     targetWpm = Number($("speed").value);
     activeWpm = targetWpm;
+    variationTargetWpm = targetWpm;
     $("variationOptions").hidden = !$("variable").checked;
     renderSpeed();
     syncControls();
