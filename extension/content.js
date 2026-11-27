@@ -16,7 +16,7 @@
       .brand-mark svg{width:28px;height:28px;display:block}
       textarea{display:block;flex:1 1 0;width:100%;min-width:0;min-height:125px;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
       textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
-      input[type=range]{-webkit-appearance:none;appearance:none;width:145px;height:18px;background:transparent;cursor:pointer}
+      input[type=range]{-webkit-appearance:none;appearance:none;width:min(45%,220px);min-width:110px;flex:1;height:18px;background:transparent;cursor:pointer}
       input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#315E58,#8AB8A9);border:1px solid #D2E2DA}
       input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border:2px solid #fff;border-radius:50%;background:#315E58;box-shadow:0 1px 4px rgba(35,74,65,.35);transition:transform .12s,box-shadow .12s}
       input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.12);box-shadow:0 0 0 4px rgba(71,127,118,.14)}
@@ -30,10 +30,18 @@
       input[type=checkbox]:focus-visible{outline:2px solid #78A69B;outline-offset:2px}
       input[type=checkbox]:disabled{cursor:not-allowed;opacity:.5}
       button{border:1px solid #DCE7E2;background:#F7FAF8;color:#405650;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0;transition:background .15s,border-color .15s}
-      button:hover:not(:disabled){background:#EDF4F0;border-color:#C8DAD2}
+      button:hover:not(:disabled){background:#E3E8E6;border-color:#BFCAC5}
       button.primary{background:#477F76;color:white;border-color:#477F76;font-weight:600}
       button.primary:hover:not(:disabled){background:#386D65;border-color:#386D65}
-      button:disabled,input:disabled,textarea:disabled{opacity:.48;cursor:not-allowed}
+      button:disabled,input:disabled,textarea:disabled{opacity:.68;cursor:not-allowed}
+      button:not(:disabled){cursor:pointer}
+      .variation-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px;padding:9px 10px;background:#F6F9F7;border:1px solid #E6EEEA;border-radius:8px}
+      .variation-options[hidden]{display:none}
+      .variation-options label{display:block;margin-bottom:4px}
+      .variation-options .unit{width:100%;grid-template-columns:minmax(0,1fr) 58px;gap:5px}
+      .variation-options .num{width:58px;min-width:0}
+      .actions .primary{display:flex;align-items:center;justify-content:center;gap:7px}
+      .play-icon{width:10px;height:10px;flex:none;fill:currentColor}
       label{font-size:12px;color:#5E716B}
       .opts{display:grid;gap:6px;margin:8px 0 6px;padding:9px 10px;background:#F6F9F7;border:1px solid #E6EEEA;border-radius:8px}
       .unit{display:grid;grid-template-columns:58px 1fr;align-items:center;gap:6px;width:112px;font-size:12px;color:#71827C}
@@ -54,8 +62,12 @@
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
-        <label title="Gradually shifts the active speed by up to 20 WPM around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
+        <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
+      </div>
+      <div class="variation-options" id="variationOptions" hidden>
+        <div><label for="variationMin">Min variation</label><span class="unit"><span>WPM</span><input id="variationMin" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" value="2"></span></div>
+        <div><label for="variationMax">Max variation</label><span class="unit"><span>WPM</span><input id="variationMax" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" value="20"></span></div>
       </div>
       <div class="opts">
         <div class="line"><label for="wordsEvery">Pause every</label><span class="unit"><input id="wordsEvery" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="3" value="0"> words</span></div>
@@ -63,7 +75,7 @@
         <div class="line"><label for="sentPause">After each sentence</label><span class="unit"><input id="sentPause" class="num" type="text" inputmode="decimal" autocomplete="off" maxlength="5" value="0"> sec</span></div>
       </div>
       <div class="actions">
-        <button class="primary" id="start">Begin</button>
+        <button class="primary" id="start"><svg class="play-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 1.4a.7.7 0 0 1 1.05-.6l7 4.5a.82.82 0 0 1 0 1.4l-7 4.5a.7.7 0 0 1-1.05-.6z"/></svg>Begin</button>
         <button id="pause">Pause</button>
         <button id="resume">Resume</button>
         <button id="stop">Reset</button>
@@ -76,7 +88,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.13";
+  const VERSION = "1.16";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -91,6 +103,16 @@
   let targetWpm = Number($("speed").value);
   let activeWpm = targetWpm;
   let driftCounter = 0;
+  let variationMin = 2;
+  let variationMax = 20;
+  let settingsReady = false;
+  const settingIds = ["speed", "variable", "pauses", "wordsEvery", "wordsPause", "sentPause", "variationMin", "variationMax"];
+  const saveSettings = () => {
+    if (!settingsReady || !chrome.storage?.local) return;
+    const settings = {};
+    for (const id of settingIds) settings[id] = $(id).type === "checkbox" ? $(id).checked : $(id).value;
+    chrome.storage.local.set({ typeflowSettings: settings });
+  };
 
   // Prevent toolbar buttons from moving the Docs caret.
   shadow.addEventListener("mousedown", event => {
@@ -144,18 +166,15 @@
     }
     driftCounter += 1;
     if (driftCounter % 3 !== 0) return;
-    const lower = Math.max(5, targetWpm - 20);
-    const upper = Math.min(120, targetWpm + 20);
+    const lower = Math.max(5, targetWpm - variationMax);
+    const upper = Math.min(120, targetWpm + variationMax);
     const distance = activeWpm - targetWpm;
-    let change;
-    if (Math.abs(distance) >= 16) {
-      change = -Math.sign(distance) * (2 + Math.floor(Math.random() * 3));
-    } else if (Math.random() < 0.22) {
-      change = -Math.sign(distance || (Math.random() < 0.5 ? -1 : 1)) * (2 + Math.floor(Math.random() * 3));
-    } else {
-      change = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.floor(Math.random() * 3));
-    }
-    activeWpm = Math.max(lower, Math.min(upper, activeWpm + change));
+    const direction = distance === 0 ? (Math.random() < 0.5 ? -1 : 1) : (Math.random() < 0.28 ? -Math.sign(distance) : (Math.random() < 0.5 ? -1 : 1));
+    const offset = variationMin + Math.floor(Math.random() * (variationMax - variationMin + 1));
+    const destination = Math.max(lower, Math.min(upper, targetWpm + direction * offset));
+    const stepSize = Math.min(4, Math.max(1, Math.abs(destination - activeWpm)));
+    activeWpm += Math.sign(destination - activeWpm) * stepSize;
+    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
     renderSpeed();
   };
 
@@ -177,7 +196,9 @@
   const numberFields = [
     { id: "wordsEvery", decimals: false, max: 500 },
     { id: "wordsPause", decimals: true, max: 30 },
-    { id: "sentPause", decimals: true, max: 30 }
+    { id: "sentPause", decimals: true, max: 30 },
+    { id: "variationMin", decimals: false, max: 20 },
+    { id: "variationMax", decimals: false, max: 20 }
   ];
   for (const { id, decimals, max } of numberFields) {
     const el = $(id);
@@ -219,7 +240,9 @@
     $("wordsEvery").disabled = settingsLocked;
     $("wordsPause").disabled = settingsLocked;
     $("sentPause").disabled = settingsLocked;
-    $("start").disabled = running;
+    $("variationMin").disabled = settingsLocked;
+    $("variationMax").disabled = settingsLocked;
+    $("start").disabled = running || !settingsReady;
     $("pause").disabled = !running || paused;
     $("resume").disabled = !running || !paused;
     $("stop").disabled = !running;
@@ -310,11 +333,27 @@
     activeWpm = targetWpm;
     driftCounter = 0;
     renderSpeed();
+    saveSettings();
   });
   $("variable").addEventListener("change", () => {
     driftCounter = 0;
     if (!$("variable").checked) activeWpm = targetWpm;
+    $("variationOptions").hidden = !$("variable").checked;
     renderSpeed();
+    saveSettings();
+  });
+  $("pauses").addEventListener("change", saveSettings);
+  $("variationMin").addEventListener("blur", () => {
+    commitNumber($("variationMin"), false, 20);
+    variationMin = Math.max(1, Number($("variationMin").value) || 1);
+    if (variationMin > variationMax) { variationMax = variationMin; $("variationMax").value = String(variationMax); }
+    saveSettings();
+  });
+  $("variationMax").addEventListener("blur", () => {
+    commitNumber($("variationMax"), false, 20);
+    variationMax = Math.max(1, Number($("variationMax").value) || 1);
+    if (variationMax < variationMin) { variationMin = variationMax; $("variationMin").value = String(variationMin); }
+    saveSettings();
   });
   $("start").addEventListener("click", async () => {
     const source = $("text").value;
@@ -369,7 +408,32 @@
     void finish("Reset", true);
   });
 
+  const loadSettings = async () => {
+    if (!chrome.storage?.local) { settingsReady = true; syncControls(); return; }
+    try {
+      const stored = await chrome.storage.local.get("typeflowSettings");
+      const settings = stored.typeflowSettings || {};
+      for (const id of settingIds) if (id in settings) {
+        if ($(id).type === "checkbox") $(id).checked = Boolean(settings[id]);
+        else $(id).value = String(settings[id]);
+      }
+    } catch (error) { console.warn("TypeFlow could not restore saved settings.", error); }
+    settingsReady = true;
+    for (const { id, decimals, max } of numberFields) commitNumber($(id), decimals, max);
+    variationMin = Math.max(1, Math.min(20, Number($("variationMin").value) || 1));
+    variationMax = Math.max(variationMin, Math.min(20, Number($("variationMax").value) || 20));
+    $("variationMin").value = String(variationMin);
+    $("variationMax").value = String(variationMax);
+    targetWpm = Number($("speed").value);
+    activeWpm = targetWpm;
+    $("variationOptions").hidden = !$("variable").checked;
+    renderSpeed();
+    syncControls();
+    saveSettings();
+  };
+  for (const { id } of numberFields) $(id).addEventListener("input", saveSettings);
   renderSpeed();
   syncControls();
   document.documentElement.appendChild(host);
+  void loadSettings();
 })();
