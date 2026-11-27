@@ -185,7 +185,7 @@
     }
 
     const distanceToTarget = variationTargetWpm - activeWpm;
-    const stepSize = Math.min(0.25, Math.abs(distanceToTarget));
+    const stepSize = Math.min(0.1, Math.abs(distanceToTarget));
     activeWpm += Math.sign(distanceToTarget) * stepSize;
     activeWpm = Math.max(5, Math.min(120, activeWpm));
     renderSpeed();
