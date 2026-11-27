@@ -1,6 +1,7 @@
 # TypeFlow
-> Version history 1.10
+> Version history 1.11
 >
+> 1.11: Added draggable positioning and resizing for the Google Docs toolbar.
 > 1.10: Removed redundant timing and punctuation helper text.
 
 ## Important
