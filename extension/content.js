@@ -16,7 +16,19 @@
       .brand-mark svg{width:28px;height:28px;display:block}
       textarea{display:block;flex:1 1 0;width:100%;min-width:0;min-height:125px;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
       textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
-      input[type=range]{width:145px;accent-color:#477F76}
+      input[type=range]{-webkit-appearance:none;appearance:none;width:145px;height:18px;background:transparent;cursor:pointer}
+      input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#315E58,#8AB8A9);border:1px solid #D2E2DA}
+      input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border:2px solid #fff;border-radius:50%;background:#315E58;box-shadow:0 1px 4px rgba(35,74,65,.35);transition:transform .12s,box-shadow .12s}
+      input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.12);box-shadow:0 0 0 4px rgba(71,127,118,.14)}
+      input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#315E58,#8AB8A9);border:1px solid #D2E2DA}
+      input[type=range]::-moz-range-thumb{width:12px;height:12px;border:2px solid #fff;border-radius:50%;background:#315E58;box-shadow:0 1px 4px rgba(35,74,65,.35)}
+      input[type=range]:focus-visible{outline:2px solid #78A69B;outline-offset:4px;border-radius:8px}
+      input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;flex:none;margin:0;border:1.5px solid #A8BDB4;border-radius:5px;background:linear-gradient(#fff,#F4F8F5);box-shadow:inset 0 1px 2px rgba(35,74,65,.08);cursor:pointer;display:grid;place-items:center;transition:background .14s,border-color .14s,box-shadow .14s}
+      input[type=checkbox]::after{content:"";width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) scale(0);margin-top:-2px;transition:transform .12s}
+      input[type=checkbox]:checked{background:linear-gradient(145deg,#477F76,#315E58);border-color:#315E58;box-shadow:0 1px 4px rgba(49,94,88,.24)}
+      input[type=checkbox]:checked::after{transform:rotate(45deg) scale(1)}
+      input[type=checkbox]:focus-visible{outline:2px solid #78A69B;outline-offset:2px}
+      input[type=checkbox]:disabled{cursor:not-allowed;opacity:.5}
       button{border:1px solid #DCE7E2;background:#F7FAF8;color:#405650;border-radius:7px;padding:8px 10px;cursor:pointer;margin:3px 3px 3px 0;transition:background .15s,border-color .15s}
       button:hover:not(:disabled){background:#EDF4F0;border-color:#C8DAD2}
       button.primary{background:#477F76;color:white;border-color:#477F76;font-weight:600}
@@ -24,8 +36,8 @@
       button:disabled,input:disabled,textarea:disabled{opacity:.48;cursor:not-allowed}
       label{font-size:12px;color:#5E716B}
       .opts{display:grid;gap:6px;margin:8px 0 6px;padding:9px 10px;background:#F6F9F7;border:1px solid #E6EEEA;border-radius:8px}
-      .unit{display:flex;align-items:center;gap:6px;font-size:12px;color:#71827C}
-      .num{width:58px;text-align:right;border:1px solid #DCE7E2;border-radius:6px;padding:4px 6px;font-size:12px;color:#293B40;background:#fff}
+      .unit{display:grid;grid-template-columns:58px 1fr;align-items:center;gap:6px;width:112px;font-size:12px;color:#71827C}
+      .num{width:58px;min-width:58px;text-align:right;border:1px solid #DCE7E2;border-radius:6px;padding:4px 6px;font-size:12px;color:#293B40;background:#fff}
       .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;padding-top:7px;flex:none}
       #state{flex:1;color:#71827C;font-size:10px;line-height:1.4;min-height:13px}
       .version{flex:none;white-space:nowrap;text-align:right;font-size:9.5px;color:#9AA9A3}
@@ -42,7 +54,7 @@
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
-        <label title="Gradually shifts the active speed by up to 10 WPM around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
+        <label title="Gradually shifts the active speed by up to 20 WPM around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
       </div>
       <div class="opts">
@@ -123,7 +135,7 @@
     $("speedval").textContent = String(shown);
   };
 
-  // Move the displayed speed gradually, never more than 10 WPM from the chosen target.
+  // Vary speed more visibly, updating every three characters within 20 WPM of the target.
   const updateVariableSpeed = () => {
     if (!$("variable").checked) {
       activeWpm = targetWpm;
@@ -131,16 +143,19 @@
       return;
     }
     driftCounter += 1;
-    if (driftCounter % 12 !== 0) return;
-    let next = activeWpm;
-    if (Math.random() < 0.25 && Math.abs(next - targetWpm) > 0) {
-      next += Math.sign(targetWpm - next);
+    if (driftCounter % 3 !== 0) return;
+    const lower = Math.max(5, targetWpm - 20);
+    const upper = Math.min(120, targetWpm + 20);
+    const distance = activeWpm - targetWpm;
+    let change;
+    if (Math.abs(distance) >= 16) {
+      change = -Math.sign(distance) * (2 + Math.floor(Math.random() * 3));
+    } else if (Math.random() < 0.22) {
+      change = -Math.sign(distance || (Math.random() < 0.5 ? -1 : 1)) * (2 + Math.floor(Math.random() * 3));
     } else {
-      next += Math.random() < 0.5 ? -1 : 1;
+      change = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.floor(Math.random() * 3));
     }
-    const lower = Math.max(5, targetWpm - 10);
-    const upper = Math.min(120, targetWpm + 10);
-    activeWpm = Math.max(lower, Math.min(upper, next));
+    activeWpm = Math.max(lower, Math.min(upper, activeWpm + change));
     renderSpeed();
   };
 
