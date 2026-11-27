@@ -1,14 +1,17 @@
-# AccessDraft
-
-> AccessDraft is a browser-based accessibility tool for progressively inserting text into supported writing fields.
+# AccessDraft 
+> Version history 1.06
 
 ## Important
 
 > [!CAUTION]
 > **Google Docs support is experimental.**
 >
-> The Google Docs extension still needs live testing. Compatibility may vary by Chrome version, device, and browser policy. Test it before relying on it for important work.
+> I can't stop you from misusing this, but I do not condone using this on homework
+> to fake human typing.
+> It is wrong and you should think twice before stooping to this level.
+> I created this strictly for educational purposes.
 >
+> 
 
 ## Google Docs Extension
 
