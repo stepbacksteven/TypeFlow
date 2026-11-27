@@ -88,7 +88,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.18";
+  const VERSION = "1.19";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -153,11 +153,12 @@
   makeDraggable($("panel").querySelector("header"));
 
   const renderSpeed = () => {
+    $("speed").value = String(Math.max(5, Math.min(120, Math.round(activeWpm))));
     $("speedval").textContent = String(Math.round(activeWpm));
   };
 
-  // Every three characters, shift directly by a random amount in the selected variation range.
-  // Larger values create larger jumps. At 99 WPM, the speed reaches the available upper and lower limits.
+  // Move gradually toward a changing speed target. Larger variation settings increase
+  // the step size, while speed still transitions through intermediate values.
   const updateVariableSpeed = () => {
     if (!$("variable").checked) {
       activeWpm = targetWpm;
@@ -168,9 +169,15 @@
     if (driftCounter % 3 !== 0) return;
     const lower = Math.max(5, targetWpm - variationMax);
     const upper = Math.min(120, targetWpm + variationMax);
+    const distance = activeWpm - targetWpm;
+    const direction = distance === 0
+      ? (Math.random() < 0.5 ? -1 : 1)
+      : (Math.random() < 0.28 ? -Math.sign(distance) : (Math.random() < 0.5 ? -1 : 1));
     const offset = variationMin + Math.floor(Math.random() * (variationMax - variationMin + 1));
-    activeWpm = Math.max(lower, Math.min(upper, targetWpm + variationDirection * offset));
-    variationDirection *= -1;
+    const destination = Math.max(lower, Math.min(upper, targetWpm + direction * offset));
+    const stepSize = Math.min(Math.max(1, Math.ceil(offset / 8)), Math.abs(destination - activeWpm));
+    activeWpm += Math.sign(destination - activeWpm) * stepSize;
+    activeWpm = Math.max(lower, Math.min(upper, activeWpm));
     renderSpeed();
   };
 
@@ -283,7 +290,7 @@
     paused = false;
     clearTimeout(timer);
     timer = null;
-    if (resetPosition) { sourceIndex = 0; wordsSincePause = 0; }
+    if (resetPosition) { sourceIndex = 0; wordsSincePause = 0; activeWpm = targetWpm; driftCounter = 0; renderSpeed(); }
     state(message);
     syncControls();
     if (attached) {
@@ -356,10 +363,10 @@
   };
   $("variationMin").addEventListener("input", () => updateVariationSettings("variationMin"));
   $("variationMax").addEventListener("input", () => updateVariationSettings("variationMax"));
-  $("variationMin").addEventListener("change", () => { commitNumber($("variationMin"), false, 20); updateVariationSettings("variationMin"); });
-  $("variationMax").addEventListener("change", () => { commitNumber($("variationMax"), false, 20); updateVariationSettings("variationMax"); });
-  $("variationMin").addEventListener("blur", () => { commitNumber($("variationMin"), false, 20); updateVariationSettings("variationMin"); });
-  $("variationMax").addEventListener("blur", () => { commitNumber($("variationMax"), false, 20); updateVariationSettings("variationMax"); });
+  $("variationMin").addEventListener("change", () => { commitNumber($("variationMin"), false, 99); updateVariationSettings("variationMin"); });
+  $("variationMax").addEventListener("change", () => { commitNumber($("variationMax"), false, 99); updateVariationSettings("variationMax"); });
+  $("variationMin").addEventListener("blur", () => { commitNumber($("variationMin"), false, 99); updateVariationSettings("variationMin"); });
+  $("variationMax").addEventListener("blur", () => { commitNumber($("variationMax"), false, 99); updateVariationSettings("variationMax"); });
   $("start").addEventListener("click", async () => {
     const source = $("text").value;
     if (!source) return state("Add text first");
