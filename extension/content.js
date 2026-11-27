@@ -88,7 +88,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.19";
+  const VERSION = "1.20";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -173,7 +173,9 @@
     const direction = distance === 0
       ? (Math.random() < 0.5 ? -1 : 1)
       : (Math.random() < 0.28 ? -Math.sign(distance) : (Math.random() < 0.5 ? -1 : 1));
-    const offset = variationMin + Math.floor(Math.random() * (variationMax - variationMin + 1));
+    const offsetMin = Math.min(variationMin, variationMax);
+    const offsetMax = Math.max(variationMin, variationMax);
+    const offset = offsetMin + Math.floor(Math.random() * (offsetMax - offsetMin + 1));
     const destination = Math.max(lower, Math.min(upper, targetWpm + direction * offset));
     const stepSize = Math.min(Math.max(1, Math.ceil(offset / 8)), Math.abs(destination - activeWpm));
     activeWpm += Math.sign(destination - activeWpm) * stepSize;
@@ -347,26 +349,29 @@
     saveSettings();
   });
   $("pauses").addEventListener("change", saveSettings);
-  const updateVariationSettings = changedId => {
+  const updateVariationSettings = () => {
     const minInput = $("variationMin");
     const maxInput = $("variationMax");
     if (minInput.value === "" || maxInput.value === "") return;
-    let minValue = Math.max(1, Math.min(99, Number(minInput.value)));
-    let maxValue = Math.max(1, Math.min(99, Number(maxInput.value)));
-    if (changedId === "variationMin" && minValue > maxValue) maxValue = minValue;
-    if (changedId === "variationMax" && maxValue < minValue) minValue = maxValue;
-    variationMin = minValue;
-    variationMax = maxValue;
-    minInput.value = String(minValue);
-    maxInput.value = String(maxValue);
+    // Keep the two controls independent. Normalize their values only for calculations.
+    variationMin = Math.max(1, Math.min(99, Number(minInput.value)));
+    variationMax = Math.max(1, Math.min(99, Number(maxInput.value)));
     saveSettings();
   };
-  $("variationMin").addEventListener("input", () => updateVariationSettings("variationMin"));
-  $("variationMax").addEventListener("input", () => updateVariationSettings("variationMax"));
-  $("variationMin").addEventListener("change", () => { commitNumber($("variationMin"), false, 99); updateVariationSettings("variationMin"); });
-  $("variationMax").addEventListener("change", () => { commitNumber($("variationMax"), false, 99); updateVariationSettings("variationMax"); });
-  $("variationMin").addEventListener("blur", () => { commitNumber($("variationMin"), false, 99); updateVariationSettings("variationMin"); });
-  $("variationMax").addEventListener("blur", () => { commitNumber($("variationMax"), false, 99); updateVariationSettings("variationMax"); });
+  const commitVariationInput = id => {
+    const input = $(id);
+    let value = Number(input.value);
+    if (!Number.isFinite(value)) value = 1;
+    value = Math.max(1, Math.min(99, value));
+    input.value = String(value);
+    updateVariationSettings();
+  };
+  $("variationMin").addEventListener("input", updateVariationSettings);
+  $("variationMax").addEventListener("input", updateVariationSettings);
+  $("variationMin").addEventListener("change", () => commitVariationInput("variationMin"));
+  $("variationMax").addEventListener("change", () => commitVariationInput("variationMax"));
+  $("variationMin").addEventListener("blur", () => commitVariationInput("variationMin"));
+  $("variationMax").addEventListener("blur", () => commitVariationInput("variationMax"));
   $("start").addEventListener("click", async () => {
     const source = $("text").value;
     if (!source) return state("Add text first");
