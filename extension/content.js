@@ -68,7 +68,7 @@
     <button id="reopen" type="button" title="Reopen TypeFlow" aria-label="Reopen TypeFlow"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></button>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.11";
+  const VERSION = "1.12";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -124,7 +124,8 @@
   };
   makeDraggable($("panel").querySelector("header"));
   makeDraggable($("reopen"));
-\n  const renderSpeed = () => {
+
+  const renderSpeed = () => {
     const shown = Math.round(activeWpm);
     $("speed").value = String(shown);
     $("speedval").textContent = String(shown);
