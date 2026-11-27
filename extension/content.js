@@ -3,7 +3,7 @@
 
   const host = document.createElement("div");
   host.id = "typeflow-docs-extension";
-  host.style.cssText = "all:initial;position:fixed;right:18px;bottom:18px;z-index:2147483647";
+  host.style.cssText = "all:initial;position:fixed;right:18px;top:90px;z-index:2147483647";
   const shadow = host.attachShadow({ mode: "open" });
   shadow.innerHTML = `
     <style>
@@ -38,8 +38,10 @@
       .actions button{flex:1;margin:0;padding:8px 5px;white-space:nowrap}
       .actions button.primary{flex:1.1}
       .speed-row{margin-top:5px}
+      #reopen{display:none;width:40px;height:40px;padding:0;border:1px solid #DCE7E2;border-radius:12px;background:#315E58;box-shadow:0 4px 14px rgba(37,65,59,.18);cursor:pointer;place-items:center}
+      #reopen svg{width:28px;height:28px;display:block}
     </style>
-    <section>
+    <section id="panel">
       <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span><button class="close" id="close" title="Close">×</button></header>
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" value="50" aria-label="Target words per minute"></div>
@@ -63,10 +65,11 @@
         <div id="state" role="status">Click in the doc, then Begin</div>
         <div class="version" id="version"></div>
       </div>
-    </section>`;
+    </section>
+    <button id="reopen" type="button" title="Reopen TypeFlow" aria-label="Reopen TypeFlow"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></button>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.08";
+  const VERSION = "1.09";
   const $ = id => shadow.getElementById(id);
   $("version").textContent = "Version history " + VERSION;
   const state = value => { $("state").textContent = value; };
@@ -326,7 +329,13 @@
 
   $("close").addEventListener("click", () => {
     void finish("Closed");
-    host.remove();
+    $("panel").hidden = true;
+    $("reopen").style.display = "grid";
+  });
+
+  $("reopen").addEventListener("click", () => {
+    $("panel").hidden = false;
+    $("reopen").style.display = "none";
   });
 
   renderSpeed();
