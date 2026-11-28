@@ -669,4 +669,5 @@
   syncControls();
   document.documentElement.appendChild(host);
   void loadSettings();
+  void loadProfiles();
 })();
