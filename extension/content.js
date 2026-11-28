@@ -14,7 +14,7 @@
       .brand{display:flex;align-items:center;gap:9px}
       .brand-mark{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#315E58;box-shadow:0 2px 5px rgba(49,94,88,.18)}
       .brand-mark svg{width:28px;height:28px;display:block}
-      textarea{display:block;flex:1 1 100px;width:100%;height:100px;min-width:0;min-height:100px;max-height:none;overflow:auto;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
+      textarea{display:block;flex:0 0 100px;width:100%;height:100px;min-width:0;min-height:100px;max-height:100px;overflow:auto;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
       textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
       input[type=range]{-webkit-appearance:none;appearance:none;width:min(45%,220px);min-width:110px;flex:1;height:18px;background:transparent;cursor:pointer;touch-action:pan-y}
       input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#315E58,#8AB8A9);border:1px solid #D2E2DA}
@@ -77,7 +77,7 @@
       <textarea id="text" placeholder="Paste or type text here"></textarea>
       <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="0.01" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
-        <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox" checked> Timing variation</label>
+        <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox"> Timing variation</label>
         <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
       </div>
       <div class="variation-options" id="variationOptions" hidden>
@@ -112,7 +112,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.29";
+  const VERSION = "1.30";
 
   /* variation-engine:start */
   // A fresh weighted random choice is made for every inserted character.
@@ -331,14 +331,23 @@
   };
   makeDraggable($("panel").querySelector("header"));
 
-  // Keep every control visible when optional settings open. The text area grows
-  // with the panel, while the panel itself expands if its content would overflow.
+  // The text area has a fixed height. The panel's minimum height follows its
+  // full content so controls and the version footer remain visible without scrolling.
   const fitPanelToContent = () => {
     const panel = $("panel");
-    const available = Math.max(260, window.innerHeight - panel.getBoundingClientRect().top - 8);
-    const needed = panel.scrollHeight + 2;
-    if (needed > panel.clientHeight + 1) {
-      panel.style.height = Math.min(available, needed) + "px";
+    const currentTop = host.getBoundingClientRect().top;
+    const requiredHeight = panel.scrollHeight + 2;
+    const viewportHeight = window.innerHeight;
+    const safeHeight = Math.max(240, viewportHeight - 16);
+    const targetHeight = Math.min(requiredHeight, safeHeight);
+    const targetTop = Math.max(8, Math.min(currentTop, viewportHeight - targetHeight - 8));
+    if (Math.abs(host.getBoundingClientRect().top - targetTop) > 1) {
+      host.style.top = targetTop + "px";
+    }
+    panel.style.maxHeight = safeHeight + "px";
+    panel.style.minHeight = targetHeight + "px";
+    if (panel.getBoundingClientRect().height < targetHeight - 1) {
+      panel.style.height = targetHeight + "px";
     }
   };
   const panelResizeObserver = new ResizeObserver(() => {
@@ -346,6 +355,7 @@
     if (panel.scrollHeight > panel.clientHeight + 1) fitPanelToContent();
   });
   panelResizeObserver.observe($("panel"));
+  window.addEventListener("resize", fitPanelToContent);
 
   let sliderAnimation = null;
   const animateSliderTo = value => {
@@ -572,8 +582,8 @@
       $("cancelSaveProfile").hidden = true;
     }
     $("variationOptions").hidden = !$("variable").checked;
-    renderSpeed();
     fitPanelToContent();
+    renderSpeed();
     saveSettings();
   });
   $("pauses").addEventListener("change", saveSettings);
@@ -756,5 +766,6 @@
   void (async () => {
     await loadSettings();
     await loadProfiles();
+    requestAnimationFrame(() => requestAnimationFrame(fitPanelToContent));
   })();
 })();
