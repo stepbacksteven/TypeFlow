@@ -57,22 +57,20 @@
       .actions button.primary{flex:1.1}
       .speed-row{margin-top:5px}
       .variation-options{grid-template-columns:1fr 1fr}
-      .profiles{grid-column:1/-1;margin-top:2px;padding:10px;background:linear-gradient(145deg,#F1F7F3,#EAF2ED);border:1px solid #D8E6DE;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
-      .profiles[hidden],.profile-editor[hidden]{display:none}
-      .profiles-heading{display:flex;align-items:center;gap:8px;margin-bottom:9px;color:#315E58}
+      .profiles{grid-column:1/-1;width:100%;max-width:100%;margin:4px auto 0;padding:11px 12px;background:linear-gradient(145deg,#F1F7F3,#EAF2ED);border:1px solid #D8E6DE;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);text-align:center}
+      .profiles[hidden]{display:none}
+      .profiles-heading{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto 10px;color:#315E58}
       .profiles-heading strong{display:block;font-size:12px;letter-spacing:.1px}
-      .profiles-heading small{display:block;margin-top:2px;color:#82928C;font-size:10px}
       .profiles-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#DCEBE2;color:#315E58;font-size:17px;font-weight:700}
-      .profile-row{display:flex;align-items:center;gap:5px;margin-top:0}
-      .profile-row select{flex:1;min-width:0;height:32px;padding:4px 8px;border:1px solid #CEDFD5;border-radius:7px;background:#fff;color:#405650;font-size:11px;box-shadow:0 1px 2px rgba(36,70,59,.04)}
-      .profile-row button{margin:0;height:32px;padding:5px 9px;font-size:11px;white-space:nowrap}
-      .profile-row .profile-save,.profile-editor .profile-save{background:#477F76;color:#fff;border-color:#477F76;font-weight:600}
-      .profile-row .profile-save:hover:not(:disabled),.profile-editor .profile-save:hover:not(:disabled){background:#386D65;border-color:#386D65}
-      .profile-row .profile-delete{width:31px;padding:4px;font-size:17px;color:#7A8D85}
-      .profile-editor{display:flex;gap:5px;margin-top:7px}
-      .profile-editor input{flex:1;min-width:0;height:30px;padding:5px 8px;border:1px solid #CEDFD5;border-radius:7px;background:#fff;color:#293B40;font-size:11px;outline:none}
-      .profile-editor input:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
-      .profile-editor button{margin:0;padding:5px 8px;font-size:10px;white-space:nowrap}
+      .profile-row{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:0 auto}
+      .profile-row select,.profile-row input{flex:1;min-width:0;height:33px;padding:5px 9px;border:1px solid #CEDFD5;border-radius:7px;background:#fff;color:#405650;font-size:11px;box-shadow:0 1px 2px rgba(36,70,59,.04);outline:none}
+      .profile-row input:focus,.profile-row select:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
+      .profile-row input[hidden]{display:none}
+      .profile-row button{flex:none;margin:0;height:33px;padding:5px 10px;font-size:11px;white-space:nowrap}
+      .profile-row .profile-save{background:#477F76;color:#fff;border-color:#477F76;font-weight:600}
+      .profile-row .profile-save:hover:not(:disabled){background:#386D65;border-color:#386D65}
+      .profile-row .profile-delete{width:32px;padding:4px;font-size:17px;color:#7A8D85}
+      .profile-row .profile-cancel{width:32px;padding:4px;font-size:17px;color:#7A8D85}
     </style>
     <section id="panel">
       <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span></header>
@@ -86,16 +84,13 @@
         <div><label for="variationMin">Min variation</label><span class="unit"><span>WPM</span><input id="variationMin" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" value="2"></span></div>
         <div><label for="variationMax">Max variation</label><span class="unit"><span>WPM</span><input id="variationMax" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" value="20"></span></div>
         <div class="profiles" id="profilesPanel">
-          <div class="profiles-heading"><span class="profiles-icon">↗</span><span><strong>Speed profiles</strong><small>Quick presets and your saved setups</small></span></div>
+          <div class="profiles-heading"><span class="profiles-icon">↗</span><strong>Speed</strong></div>
           <div class="profile-row">
-            <select id="profileSelect" aria-label="Saved speed profiles"><option value="">Choose a profile</option></select>
+            <select id="profileSelect" aria-label="Speed profile" title="Select a speed profile"></select>
+            <input id="profileName" type="text" maxlength="32" placeholder="Name this profile" aria-label="Name this profile" hidden>
             <button id="saveProfile" type="button" class="profile-save">＋ Save</button>
             <button id="deleteProfile" type="button" class="profile-delete" disabled aria-label="Delete selected profile">×</button>
-          </div>
-          <div class="profile-editor" id="profileEditor" hidden>
-            <input id="profileName" type="text" maxlength="32" placeholder="Name this profile" aria-label="Profile name">
-            <button id="confirmSaveProfile" type="button" class="profile-save">Save profile</button>
-            <button id="cancelSaveProfile" type="button" class="profile-cancel">Cancel</button>
+            <button id="cancelSaveProfile" type="button" class="profile-cancel" aria-label="Cancel naming profile" hidden>×</button>
           </div>
         </div>
       </div>
@@ -117,7 +112,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.26";
+  const VERSION = "1.27";
 
   /* variation-engine:start */
   // A fresh weighted random choice is made for every inserted character.
@@ -220,9 +215,9 @@
   let settingsReady = false;
   const settingIds = ["speed", "variable", "pauses", "wordsEvery", "wordsPause", "sentPause", "variationMin", "variationMax"];
   const BUILTIN_PROFILES = {
-    "Quiet Start": { speed: 35, variable: true, variationMin: 2, variationMax: 8 },
-    "Balanced Flow": { speed: 50, variable: true, variationMin: 2, variationMax: 20 },
-    "Quick Draft": { speed: 75, variable: true, variationMin: 5, variationMax: 30 }
+    "Slow": { speed: 40, variable: true, variationMin: 15, variationMax: 10 },
+    "Medium": { speed: 60, variable: true, variationMin: 15, variationMax: 18 },
+    "Fast": { speed: 75, variable: true, variationMin: 10, variationMax: 20 }
   };
   let savedProfiles = {};
   const readProfileSettings = () => ({
@@ -233,7 +228,7 @@
   });
   const refreshProfileOptions = selected => {
     const select = $("profileSelect");
-    select.replaceChildren(new Option("Choose a profile", ""));
+    select.replaceChildren();
     const builtins = document.createElement("optgroup");
     builtins.label = "Built-in profiles";
     for (const name of Object.keys(BUILTIN_PROFILES)) builtins.append(new Option(name, "builtin:" + name));
@@ -245,7 +240,7 @@
       for (const name of customNames) custom.append(new Option(name, "custom:" + name));
       select.append(custom);
     }
-    select.value = selected || "";
+    select.value = selected || "builtin:Medium";
     $("deleteProfile").disabled = !select.value.startsWith("custom:");
   };
   const loadProfiles = async () => {
@@ -253,7 +248,8 @@
     try {
       const stored = await chrome.storage.local.get(["typeflowProfiles", "typeflowActiveProfile"]);
       savedProfiles = stored.typeflowProfiles && typeof stored.typeflowProfiles === "object" ? stored.typeflowProfiles : {};
-      refreshProfileOptions(stored.typeflowActiveProfile || "");
+      const active = stored.typeflowActiveProfile && (stored.typeflowActiveProfile === "builtin:Slow" || stored.typeflowActiveProfile === "builtin:Medium" || stored.typeflowActiveProfile === "builtin:Fast" || stored.typeflowActiveProfile.startsWith("custom:") && savedProfiles[stored.typeflowActiveProfile.slice(7)]) ? stored.typeflowActiveProfile : "builtin:Medium";
+      applyProfile(active);
     } catch (error) {
       console.warn("TypeFlow could not restore saved profiles.", error);
     }
@@ -281,7 +277,9 @@
     activeWpm = targetWpm;
     variation.restart();
     $("variationOptions").hidden = !$("variable").checked;
-    $("profileEditor").hidden = true;
+    $("profileName").hidden = true;
+    $("profileSelect").hidden = false;
+    $("cancelSaveProfile").hidden = true;
     renderSpeed();
     saveSettings();
     refreshProfileOptions(key);
@@ -441,7 +439,6 @@
     $("saveProfile").disabled = settingsLocked || !$("variable").checked;
     $("deleteProfile").disabled = settingsLocked || !$("profileSelect").value.startsWith("custom:");
     $("profileName").disabled = settingsLocked;
-    $("confirmSaveProfile").disabled = settingsLocked;
     $("cancelSaveProfile").disabled = settingsLocked;
     $("start").disabled = running || !settingsReady;
     $("pause").disabled = !running || paused;
@@ -554,7 +551,9 @@
     variation.restart();
     if (!$("variable").checked) {
       activeWpm = targetWpm;
-      $("profileEditor").hidden = true;
+      $("profileName").hidden = true;
+      $("profileSelect").hidden = false;
+      $("cancelSaveProfile").hidden = true;
     }
     $("variationOptions").hidden = !$("variable").checked;
     renderSpeed();
@@ -599,48 +598,59 @@
   $("profileSelect").addEventListener("change", () => {
     const key = $("profileSelect").value;
     if (key) applyProfile(key);
-    else {
-      $("deleteProfile").disabled = true;
-      persistProfiles("");
-    }
   });
+  const closeProfileNaming = () => {
+    $("profileName").hidden = true;
+    $("profileSelect").hidden = false;
+    $("cancelSaveProfile").hidden = true;
+    $("saveProfile").textContent = "＋ Save";
+  };
   $("saveProfile").addEventListener("click", () => {
     if (!$("variable").checked || running && !paused) return;
-    $("profileEditor").hidden = false;
-    $("profileName").value = $("profileSelect").value.startsWith("custom:") ? $("profileSelect").value.slice(7) : "";
+    if (!$("profileName").hidden) {
+      const name = $("profileName").value.trim().slice(0, 32);
+      if (!name) return state("Enter a profile name");
+      if (name in BUILTIN_PROFILES) return state("Choose a different name");
+      commitSettings();
+      savedProfiles[name] = readProfileSettings();
+      const key = "custom:" + name;
+      refreshProfileOptions(key);
+      persistProfiles(key);
+      closeProfileNaming();
+      state("Saved profile: " + name);
+      return;
+    }
+    $("profileSelect").hidden = true;
+    $("profileName").hidden = false;
+    $("profileName").value = "";
+    $("saveProfile").textContent = "＋ Save";
+    $("deleteProfile").hidden = true;
+    $("cancelSaveProfile").hidden = false;
     $("profileName").focus();
   });
-  const saveNamedProfile = () => {
-    const name = $("profileName").value.trim().slice(0, 32);
-    if (!name) return state("Enter a profile name");
-    if (name in BUILTIN_PROFILES) return state("Choose a different name");
-    commitSettings();
-    savedProfiles[name] = readProfileSettings();
-    const key = "custom:" + name;
-    refreshProfileOptions(key);
-    persistProfiles(key);
-    $("profileEditor").hidden = true;
-    state("Saved profile: " + name);
-  };
-  $("confirmSaveProfile").addEventListener("click", saveNamedProfile);
   $("profileName").addEventListener("keydown", event => {
     if (event.key === "Enter") {
       event.preventDefault();
-      saveNamedProfile();
+      $("saveProfile").click();
     } else if (event.key === "Escape") {
-      $("profileEditor").hidden = true;
+      closeProfileNaming();
+      $("deleteProfile").hidden = false;
     }
   });
   $("cancelSaveProfile").addEventListener("click", () => {
-    $("profileEditor").hidden = true;
+    closeProfileNaming();
+    $("deleteProfile").hidden = false;
   });
   $("deleteProfile").addEventListener("click", () => {
     const key = $("profileSelect").value;
     if (!key.startsWith("custom:")) return;
     const name = key.slice(7);
+    if (!window.confirm("Are you sure you want to delete the profile \"" + name + "\"?")) return;
     delete savedProfiles[name];
-    refreshProfileOptions("");
-    persistProfiles("");
+    const fallback = "builtin:Medium";
+    refreshProfileOptions(fallback);
+    persistProfiles(fallback);
+    applyProfile(fallback);
     state("Deleted profile: " + name);
   });
   $("start").addEventListener("click", async () => {
@@ -726,6 +736,8 @@
   renderSpeed();
   syncControls();
   document.documentElement.appendChild(host);
-  void loadSettings();
-  void loadProfiles();
+  void (async () => {
+    await loadSettings();
+    await loadProfiles();
+  })();
 })();
