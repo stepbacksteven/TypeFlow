@@ -349,12 +349,13 @@
     const targetTop = Math.max(8, Math.min(rect.top, window.innerHeight - Math.min(panel.offsetHeight, safeHeight) - 8));
     host.style.top = targetTop + "px";
   };
-  const resizeForVariationToggle = wasVisible => {
+  const resizeForVariationToggle = (wasVisible, previousVariationHeight) => {
     const panel = $("panel");
     const variationPanel = $("variationOptions");
     const currentHeight = panel.getBoundingClientRect().height;
-    const delta = variationPanel.getBoundingClientRect().height +
+    const measuredHeight = variationPanel.getBoundingClientRect().height +
       (parseFloat(getComputedStyle(variationPanel).marginTop) || 0);
+    const delta = wasVisible ? previousVariationHeight : measuredHeight;
     const nextHeight = currentHeight + (wasVisible ? -delta : delta);
     panel.style.height = Math.max(410, nextHeight) + "px";
     fitPanelToContent();
@@ -580,6 +581,8 @@
   $("variable").addEventListener("change", () => {
     variation.restart();
     const wasVisible = !$("variationOptions").hidden;
+    const previousVariationHeight = $("variationOptions").getBoundingClientRect().height +
+      (parseFloat(getComputedStyle($("variationOptions")).marginTop) || 0);
     if (!$("variable").checked) {
       activeWpm = targetWpm;
       $("profileName").hidden = true;
@@ -587,7 +590,7 @@
       $("cancelSaveProfile").hidden = true;
     }
     $("variationOptions").hidden = !$("variable").checked;
-    resizeForVariationToggle(wasVisible);
+    resizeForVariationToggle(wasVisible, previousVariationHeight);
     renderSpeed();
     saveSettings();
   });
