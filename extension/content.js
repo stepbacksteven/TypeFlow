@@ -14,7 +14,7 @@
       .brand{display:flex;align-items:center;gap:9px}
       .brand-mark{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#315E58;box-shadow:0 2px 5px rgba(49,94,88,.18)}
       .brand-mark svg{width:28px;height:28px;display:block}
-      textarea{display:block;flex:0 0 100px;width:100%;height:100px;min-width:0;min-height:100px;max-height:100px;overflow:auto;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
+      textarea{display:block;flex:1 1 100px;width:100%;height:auto;min-width:0;min-height:100px;max-height:none;overflow:auto;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
       textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
       input[type=range]{-webkit-appearance:none;appearance:none;width:min(45%,220px);min-width:110px;flex:1;height:18px;background:transparent;cursor:pointer;touch-action:pan-y}
       input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#315E58,#8AB8A9);border:1px solid #D2E2DA}
@@ -38,14 +38,14 @@
       .variation-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px;padding:9px 10px;background:#F6F9F7;border:1px solid #E6EEEA;border-radius:8px}
       .variation-options[hidden]{display:none}
       .variation-options label{display:block;margin-bottom:4px}
-      .variation-options .unit{width:100%;grid-template-columns:minmax(0,1fr) 58px;gap:5px}
-      .variation-options .num{width:58px;min-width:0}
+      .variation-options .unit{width:100%;grid-template-columns:minmax(0,1fr) minmax(48px,58px);gap:5px}
+      .variation-options .num{width:100%;min-width:0}
       .actions .primary{display:flex;align-items:center;justify-content:center;gap:7px}
       .play-icon{width:10px;height:10px;flex:none;fill:currentColor}
       label{font-size:12px;color:#5E716B}
       .opts{display:grid;gap:6px;margin:8px 0 6px;padding:9px 10px;background:#F6F9F7;border:1px solid #E6EEEA;border-radius:8px}
-      .unit{display:grid;grid-template-columns:58px 1fr;align-items:center;gap:6px;width:112px;font-size:12px;color:#71827C}
-      .num{width:58px;min-width:58px;text-align:right;border:1px solid #DCE7E2;border-radius:6px;padding:4px 6px;font-size:12px;color:#293B40;background:#fff}
+      .unit{display:grid;grid-template-columns:minmax(0,1fr) minmax(48px,1fr);align-items:center;gap:6px;width:clamp(112px,38%,180px);font-size:12px;color:#71827C}
+      .num{width:100%;min-width:0;text-align:right;border:1px solid #DCE7E2;border-radius:6px;padding:4px 6px;font-size:12px;color:#293B40;background:#fff}
       .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;padding-top:7px;flex:none}
       #state{flex:1;color:#71827C;font-size:10px;line-height:1.4;min-height:13px}
       .version{flex:none;white-space:nowrap;text-align:right;font-size:9.5px;color:#9AA9A3}
@@ -112,7 +112,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.30";
+  const VERSION = "1.31";
 
   /* variation-engine:start */
   // A fresh weighted random choice is made for every inserted character.
@@ -331,30 +331,34 @@
   };
   makeDraggable($("panel").querySelector("header"));
 
-  // The text area has a fixed height. The panel's minimum height follows its
-  // full content so controls and the version footer remain visible without scrolling.
+  // The text area fills the remaining vertical space. Optional variation controls
+  // grow or shrink the panel by their own height, preserving the text area's size.
   const fitPanelToContent = () => {
     const panel = $("panel");
-    const currentTop = host.getBoundingClientRect().top;
-    const requiredHeight = panel.scrollHeight + 2;
-    const viewportHeight = window.innerHeight;
-    const safeHeight = Math.max(240, viewportHeight - 16);
+    const textArea = $("text");
+    const textHeight = textArea.getBoundingClientRect().height;
+    const requiredHeight = Math.max(410, panel.scrollHeight - textHeight + 100);
+    const safeHeight = Math.max(240, window.innerHeight - 16);
     const targetHeight = Math.min(requiredHeight, safeHeight);
-    const targetTop = Math.max(8, Math.min(currentTop, viewportHeight - targetHeight - 8));
-    if (Math.abs(host.getBoundingClientRect().top - targetTop) > 1) {
-      host.style.top = targetTop + "px";
-    }
     panel.style.maxHeight = safeHeight + "px";
     panel.style.minHeight = targetHeight + "px";
     if (panel.getBoundingClientRect().height < targetHeight - 1) {
       panel.style.height = targetHeight + "px";
     }
+    const rect = host.getBoundingClientRect();
+    const targetTop = Math.max(8, Math.min(rect.top, window.innerHeight - Math.min(panel.offsetHeight, safeHeight) - 8));
+    host.style.top = targetTop + "px";
   };
-  const panelResizeObserver = new ResizeObserver(() => {
+  const resizeForVariationToggle = wasVisible => {
     const panel = $("panel");
-    if (panel.scrollHeight > panel.clientHeight + 1) fitPanelToContent();
-  });
-  panelResizeObserver.observe($("panel"));
+    const variationPanel = $("variationOptions");
+    const currentHeight = panel.getBoundingClientRect().height;
+    const delta = variationPanel.getBoundingClientRect().height +
+      (parseFloat(getComputedStyle(variationPanel).marginTop) || 0);
+    const nextHeight = currentHeight + (wasVisible ? -delta : delta);
+    panel.style.height = Math.max(410, nextHeight) + "px";
+    fitPanelToContent();
+  };
   window.addEventListener("resize", fitPanelToContent);
 
   let sliderAnimation = null;
@@ -575,6 +579,7 @@
   });
   $("variable").addEventListener("change", () => {
     variation.restart();
+    const wasVisible = !$("variationOptions").hidden;
     if (!$("variable").checked) {
       activeWpm = targetWpm;
       $("profileName").hidden = true;
@@ -582,7 +587,7 @@
       $("cancelSaveProfile").hidden = true;
     }
     $("variationOptions").hidden = !$("variable").checked;
-    fitPanelToContent();
+    resizeForVariationToggle(wasVisible);
     renderSpeed();
     saveSettings();
   });
