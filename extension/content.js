@@ -241,7 +241,7 @@
     const from = Number(slider.value) || value;
     const to = Math.max(5, Math.min(120, value));
     const started = performance.now();
-    const duration = 135;
+    const duration = 80;
     const animate = now => {
       const progress = Math.min(1, (now - started) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
