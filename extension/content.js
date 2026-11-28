@@ -87,73 +87,83 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.23";
+  const VERSION = "1.24";
 
   /* variation-engine:start */
-  // Speed variation is a biased random walk around the chosen speed (the "original WPM").
-  //  - Speed never leaves [original - Min, original + Max] (and always stays within 5-120 WPM).
-  //  - Larger Max makes upward legs more likely, longer and faster. Larger Min does the same downward.
-  //  - Pity system: if the speed spends too much time near one extreme, it is walked back to the
-  //    original WPM, and only then does random movement resume.
-  //  - Speeds are kept to two decimals so the slider and the pacing share one value.
+  // A fresh weighted random choice is made for every inserted character.
+  // Equal Min/Max values produce a 50/50 direction chance. Larger values favour their side.
+  // The movement amount also scales with the selected side's setting.
+  // A randomized pity threshold periodically returns speed to the original target.
   const createVariationEngine = (random = Math.random) => {
-    const ZONE = 0.6;                     // "near an extreme" = the outer 40% of that side's range
-    const DECAY = 0.25;                   // pity pressure drained per character spent away from an extreme
-    const PITY_MIN = 60, PITY_MAX = 120;  // pressure needed before the pity return (re-rolled each time)
-    const round2 = n => Math.round(n * 100) / 100;
-    let dest = null, pressure = 0, pityLimit = 0, returning = false, firstLeg = true;
+    const ZONE = 0.82;
+    const DECAY = 0.35;
+    const PITY_MIN = 80;
+    const PITY_MAX = 140;
+    const round2 = value => Math.round(value * 100) / 100;
+    let pressure = 0;
+    let pityLimit = 0;
+    let returning = false;
 
-    // restart(): new run or new target speed. retarget(): same run, but the limits changed.
-    const retarget = () => { dest = null; pressure = 0; pityLimit = 0; returning = false; };
-    const restart = () => { retarget(); firstLeg = true; };
-
-    const pickDestination = (active, target, lower, upper) => {
-      const down = target - lower, up = upper - target;
-      const minMove = Math.min(1, (up + down) * 0.15);
-      const lean = Math.abs(up - down) / (up + down);   // 0 = balanced, toward 1 = one-sided
-      // The side is chosen once, in proportion to its size, so the start direction follows Min and Max too.
-      const goUp = up > 0 && (down <= 0 || random() < up / (up + down));
-      const side = goUp ? up : down;
-      const favoured = goUp === (up >= down);
-      let pick = target;
-      for (let attempt = 0; attempt < 6; attempt++) {
-        // Favoured side: excursions lean toward its far end. Weaker side: shorter excursions.
-        let fraction = Math.pow(random(), favoured ? 1 / (1 + lean) : 1 + lean);
-        if (firstLeg) fraction = Math.max(fraction, 0.3);   // the first move should be a visible one
-        pick = goUp ? target + side * fraction : target - side * fraction;
-        if (Math.abs(pick - active) >= minMove) break;       // redraw the distance, not the side
-      }
-      return Math.min(upper, Math.max(lower, pick));
+    const restart = () => {
+      pressure = 0;
+      pityLimit = 0;
+      returning = false;
     };
+    const retarget = restart;
 
     const tick = (active, target, min, max) => {
-      const lower = Math.max(5, target - min), upper = Math.min(120, target + max);
-      const down = target - lower, up = upper - target;
+      const lower = Math.max(5, target - min);
+      const upper = Math.min(120, target + max);
+      const downRange = target - lower;
+      const upRange = upper - target;
       active = Math.min(upper, Math.max(lower, active));
-      if (up + down <= 0) { restart(); return round2(target); }
 
-      if (!returning) {
-        const nearExtreme = (up > 0 && active >= target + up * ZONE) || (down > 0 && active <= target - down * ZONE);
-        // Time near an extreme builds pressure; time away only drains it slowly, so brief dips
-        // back toward the middle don't let a long stay near an extreme go unnoticed.
-        if (pityLimit === 0) pityLimit = PITY_MIN + Math.floor(random() * (PITY_MAX - PITY_MIN + 1));
-        pressure = nearExtreme ? pressure + 1 : Math.max(0, pressure - DECAY);
-        if (pressure >= pityLimit) { returning = true; pressure = 0; pityLimit = 0; }
+      if (downRange + upRange <= 0) {
+        restart();
+        return round2(target);
       }
-      if (returning) dest = target;
-      else if (dest === null || Math.abs(dest - active) < 0.005) {
-        dest = pickDestination(active, target, lower, upper);
-        firstLeg = false;
-      }
-      dest = Math.min(upper, Math.max(lower, dest));
 
-      const distance = dest - active;
-      // Larger settings move faster. The pity return uses the larger side's pace so it never crawls.
-      const rate = returning ? Math.max(min, max) : (distance < 0 ? min : max);
-      const step = Math.max(0.02, round2(rate * 0.02));
-      active = Math.abs(distance) <= step ? dest : active + Math.sign(distance) * step;
-      active = round2(Math.min(upper, Math.max(lower, active)));
-      if (returning && Math.abs(active - target) < 0.005) { returning = false; dest = null; pressure = 0; }
+      // Pity return is temporary. Once the original WPM is reached, random movement resumes.
+      if (returning) {
+        const distance = target - active;
+        const returnStep = Math.max(0.02, round2(Math.max(min, max) * 0.02));
+        active = round2(active + Math.sign(distance) * Math.min(Math.abs(distance), returnStep));
+        if (Math.abs(active - target) < 0.005) {
+          active = target;
+          restart();
+        }
+        return active;
+      }
+
+      if (pityLimit === 0) {
+        pityLimit = PITY_MIN + Math.floor(random() * (PITY_MAX - PITY_MIN + 1));
+      }
+      const nearUpper = upRange > 0 && active >= target + upRange * ZONE;
+      const nearLower = downRange > 0 && active <= target - downRange * ZONE;
+      pressure = nearUpper || nearLower ? pressure + 1 : Math.max(0, pressure - DECAY);
+
+      if (pressure >= pityLimit) {
+        returning = true;
+        pressure = 0;
+        pityLimit = 0;
+        return tick(active, target, min, max);
+      }
+
+      // Use the effective available ranges. When they are equal, this is exactly 50/50.
+      let direction = random() < upRange / (upRange + downRange) ? 1 : -1;
+
+      // Reflect at an edge instead of sticking at the limit.
+      if (direction > 0 && active >= upper - 0.005) direction = -1;
+      else if (direction < 0 && active <= lower + 0.005) direction = 1;
+
+      const sideSetting = direction > 0 ? max : min;
+      const step = Math.max(0.02, round2(sideSetting * 0.02));
+      let next = active + direction * step;
+
+      // Reflect any overshoot so the speed remains responsive near either boundary.
+      if (next > upper) next = upper - (next - upper);
+      if (next < lower) next = lower + (lower - next);
+      active = round2(Math.min(upper, Math.max(lower, next)));
       return active;
     };
 
@@ -224,10 +234,30 @@
   };
   makeDraggable($("panel").querySelector("header"));
 
+  let sliderAnimation = null;
+  const animateSliderTo = value => {
+    const slider = $("speed");
+    if (sliderAnimation !== null) cancelAnimationFrame(sliderAnimation);
+    const from = Number(slider.value) || value;
+    const to = Math.max(5, Math.min(120, value));
+    const started = performance.now();
+    const duration = 135;
+    const animate = now => {
+      const progress = Math.min(1, (now - started) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      slider.value = String(from + (to - from) * eased);
+      if (progress < 1) sliderAnimation = requestAnimationFrame(animate);
+      else {
+        slider.value = String(to);
+        sliderAnimation = null;
+      }
+    };
+    sliderAnimation = requestAnimationFrame(animate);
+  };
+
   const renderSpeed = () => {
-    // The slider shows the exact (two-decimal) speed used for pacing, so the two never drift apart.
-    $("speed").value = String(Math.max(5, Math.min(120, activeWpm)));
-    // Show whole WPM values to the user.
+    // Keep hundredth-WPM precision internally while showing only whole numbers.
+    animateSliderTo(activeWpm);
     $("speedval").textContent = String(Math.round(activeWpm));
   };
 
