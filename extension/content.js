@@ -14,7 +14,7 @@
       .brand{display:flex;align-items:center;gap:9px}
       .brand-mark{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#315E58;box-shadow:0 2px 5px rgba(49,94,88,.18)}
       .brand-mark svg{width:28px;height:28px;display:block}
-      textarea{display:block;flex:1 1 auto;width:100%;min-width:0;min-height:0;overflow:auto;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
+      textarea{display:block;flex:0 0 100px;width:100%;height:100px;min-width:0;min-height:100px;max-height:100px;overflow:auto;resize:none;border:1px solid #DCE7E2;border-radius:8px;padding:10px;line-height:1.5;color:#293B40;background:#FCFDFC;outline:none}
       textarea:focus,.num:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
       input[type=range]{-webkit-appearance:none;appearance:none;width:min(45%,220px);min-width:110px;flex:1;height:18px;background:transparent;cursor:pointer;touch-action:pan-y}
       input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#315E58,#8AB8A9);border:1px solid #D2E2DA}
@@ -112,7 +112,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.27";
+  const VERSION = "1.28";
 
   /* variation-engine:start */
   // A fresh weighted random choice is made for every inserted character.
