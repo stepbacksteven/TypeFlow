@@ -198,7 +198,6 @@
   let settingsReady = false;
   const settingIds = ["speed", "variable", "pauses", "wordsEvery", "wordsPause", "sentPause", "variationMin", "variationMax"];
   let savedProfiles = {};
-  let applyingProfile = false;
   const readProfileSettings = () => {
     const settings = {};
     for (const id of settingIds) settings[id] = id === "speed" ? targetWpm : $(id).type === "checkbox" ? $(id).checked : $(id).value;
@@ -233,7 +232,6 @@
   const applyProfile = name => {
     const profile = savedProfiles[name];
     if (!profile) return;
-    applyingProfile = true;
     for (const id of settingIds) {
       if (!(id in profile)) continue;
       if ($(id).type === "checkbox") $(id).checked = Boolean(profile[id]);
@@ -251,7 +249,6 @@
     $("variationOptions").hidden = !$("variable").checked;
     renderSpeed();
     saveSettings();
-    applyingProfile = false;
     refreshProfileOptions(name);
     persistProfiles(name);
     state("Loaded profile: " + name);
@@ -405,6 +402,9 @@
     $("sentPause").disabled = settingsLocked;
     $("variationMin").disabled = settingsLocked;
     $("variationMax").disabled = settingsLocked;
+    $("profileSelect").disabled = settingsLocked;
+    $("saveProfile").disabled = settingsLocked;
+    $("deleteProfile").disabled = settingsLocked || !$("profileSelect").value;
     $("start").disabled = running || !settingsReady;
     $("pause").disabled = !running || paused;
     $("resume").disabled = !running || !paused;
