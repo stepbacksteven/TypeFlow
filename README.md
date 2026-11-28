@@ -1,5 +1,5 @@
 # TypeFlow
-> Version history 1.31
+> Version history 1.32
 
 ## Important
 

@@ -51,26 +51,24 @@
       .version{flex:none;white-space:nowrap;text-align:right;font-size:9.5px;color:#9AA9A3}
       .checks{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:7px}
       .checks label{display:flex;align-items:center;gap:4px;white-space:nowrap}
-      .hint{font-size:10px;line-height:1.4;color:#82928C;margin:5px 1px 2px}
       .actions{display:flex;align-items:center;gap:5px;margin-top:8px}
       .actions button{flex:1;margin:0;padding:8px 5px;white-space:nowrap}
       .actions button.primary{flex:1.1}
       .speed-row{margin-top:5px}
-      .variation-options{grid-template-columns:1fr 1fr}
-      .profiles{grid-column:1/-1;width:100%;max-width:100%;margin:4px auto 0;padding:11px 12px;background:linear-gradient(145deg,#F1F7F3,#EAF2ED);border:1px solid #D8E6DE;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);text-align:center}
+      .profiles{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;max-width:100%;margin:4px auto 0;padding:9px 10px;background:linear-gradient(145deg,#F1F7F3,#EAF2ED);border:1px solid #D8E6DE;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);text-align:left}
       .profiles[hidden]{display:none}
-      .profiles-heading{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto 10px;color:#315E58}
+      .profiles-heading{display:flex;align-items:center;justify-content:flex-start;gap:6px;flex:none;margin:0;color:#315E58}
       .profiles-heading strong{display:block;font-size:12px;letter-spacing:.1px}
       .profiles-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#DCEBE2;color:#315E58;font-size:17px;font-weight:700}
-      .profile-row{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:0 auto}
-      .profile-row select,.profile-row input{flex:1;min-width:0;height:33px;padding:5px 9px;border:1px solid #CEDFD5;border-radius:7px;background:#fff;color:#405650;font-size:11px;box-shadow:0 1px 2px rgba(36,70,59,.04);outline:none}
+      .profile-row{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex:1 1 auto;width:auto;min-width:0;margin:0}
+      .profile-row select,.profile-row input{flex:1 1 70px;width:1px;min-width:0;height:33px;padding:5px 7px;border:1px solid #CEDFD5;border-radius:7px;background:#fff;color:#405650;font-size:11px;box-shadow:0 1px 2px rgba(36,70,59,.04);outline:none}
       .profile-row input:focus,.profile-row select:focus{border-color:#78A69B;box-shadow:0 0 0 2px rgba(83,139,127,.12)}
       .profile-row input[hidden]{display:none}
-      .profile-row button{flex:none;margin:0;height:33px;padding:5px 10px;font-size:11px;white-space:nowrap}
+      .profile-row button{flex:none;margin:0;height:33px;padding:5px 8px;font-size:11px;white-space:nowrap}
       .profile-row .profile-save{background:#477F76;color:#fff;border-color:#477F76;font-weight:600}
       .profile-row .profile-save:hover:not(:disabled){background:#386D65;border-color:#386D65}
-      .profile-row .profile-delete{width:32px;padding:4px;font-size:17px;color:#7A8D85}
-      .profile-row .profile-cancel{width:32px;padding:4px;font-size:17px;color:#7A8D85}
+      .profile-row .profile-delete{width:30px;padding:4px;font-size:17px;color:#7A8D85}
+      .profile-row .profile-cancel{width:30px;padding:4px;font-size:17px;color:#7A8D85}
     </style>
     <section id="panel">
       <header><span class="brand"><span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M15 18h34M32 18v31" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M32 36c0-8 6-14 14-14h4" fill="none" stroke="#A9D6C8" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="22" r="3.5" fill="#A9D6C8"/></svg></span><span>TypeFlow <span style="font-weight:400;color:#83938D">for Google Docs</span></span></span></header>
@@ -78,13 +76,13 @@
       <div class="row speed-row"><label>Speed <b id="speedval">50</b> WPM</label><input id="speed" type="range" min="5" max="120" step="0.01" value="50" aria-label="Target words per minute"></div>
       <div class="checks">
         <label title="Gradually shifts the active speed around your selected target."><input id="variable" type="checkbox"> Timing variation</label>
-        <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox" checked> Punctuation pauses</label>
+        <label title="Adds short waits after commas, semicolons, colons, and sentence endings."><input id="pauses" type="checkbox"> Punctuation pauses</label>
       </div>
       <div class="variation-options" id="variationOptions" hidden>
         <div><label for="variationMin">Min variation</label><span class="unit"><span>WPM</span><input id="variationMin" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" value="2"></span></div>
         <div><label for="variationMax">Max variation</label><span class="unit"><span>WPM</span><input id="variationMax" class="num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" value="20"></span></div>
         <div class="profiles" id="profilesPanel">
-          <div class="profiles-heading"><span class="profiles-icon">↗</span><strong>Speed</strong></div>
+          <div class="profiles-heading"><span class="profiles-icon">↗</span><strong>Speed:</strong></div>
           <div class="profile-row">
             <select id="profileSelect" aria-label="Speed profile" title="Select a speed profile"></select>
             <input id="profileName" type="text" maxlength="32" placeholder="Name this profile" aria-label="Name this profile" hidden>
@@ -112,7 +110,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.31";
+  const VERSION = "1.32";
 
   /* variation-engine:start */
   // A fresh weighted random choice is made for every inserted character.
@@ -213,6 +211,7 @@
   let variationMin = 2;
   let variationMax = 20;
   let settingsReady = false;
+  let firstRunDefaults = false;
   const settingIds = ["speed", "variable", "pauses", "wordsEvery", "wordsPause", "sentPause", "variationMin", "variationMax"];
   const BUILTIN_PROFILES = {
     "Slow": { speed: 40, variable: true, variationMin: 15, variationMax: 10 },
@@ -747,6 +746,7 @@
     try {
       const stored = await chrome.storage.local.get("typeflowSettings");
       const settings = stored.typeflowSettings || {};
+      firstRunDefaults = !Object.prototype.hasOwnProperty.call(settings, "variable");
       for (const id of settingIds) if (id in settings) {
         if ($(id).type === "checkbox") $(id).checked = Boolean(settings[id]);
         else $(id).value = String(settings[id]);
@@ -774,6 +774,11 @@
   void (async () => {
     await loadSettings();
     await loadProfiles();
+    if (firstRunDefaults) {
+      $("variable").checked = false;
+      $("variationOptions").hidden = true;
+      saveSettings();
+    }
     requestAnimationFrame(() => requestAnimationFrame(fitPanelToContent));
   })();
 })();
