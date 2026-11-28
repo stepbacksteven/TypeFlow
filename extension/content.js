@@ -110,7 +110,7 @@
     </section>`;
 
   // Bump on every update: 1.00 was the starting version, then +0.01 per update. Keep manifest.json in sync.
-  const VERSION = "1.32";
+  const VERSION = "1.33";
 
   /* variation-engine:start */
   // A fresh weighted random choice is made for every inserted character.
@@ -637,6 +637,8 @@
     $("profileName").hidden = true;
     $("profileSelect").hidden = false;
     $("cancelSaveProfile").hidden = true;
+    $("deleteProfile").hidden = false;
+    $("deleteProfile").disabled = !$("profileSelect").value.startsWith("custom:");
     $("saveProfile").textContent = "＋ Save";
   };
   $("saveProfile").addEventListener("click", () => {
@@ -774,11 +776,11 @@
   void (async () => {
     await loadSettings();
     await loadProfiles();
-    if (firstRunDefaults) {
-      $("variable").checked = false;
-      $("variationOptions").hidden = true;
-      saveSettings();
-    }
+    // Presets restore their speed and variation range, but Timing Variation
+    // always starts disabled when the Docs toolbar is reloaded.
+    $("variable").checked = false;
+    $("variationOptions").hidden = true;
+    saveSettings();
     requestAnimationFrame(() => requestAnimationFrame(fitPanelToContent));
   })();
 })();
